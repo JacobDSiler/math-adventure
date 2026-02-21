@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="description" content="Math Adventure — a joyful homeschool maths companion for families"/>
-  <title>Math Adventure 🌟</title>
+  <title>Math Adventure</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800;900&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
@@ -33,9 +32,26 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js" crossorigin></script>
   <script type="text/babel" data-presets="react">
-    const { useState, useEffect } = React;
+const { useState, useEffect } = React;
+// ---
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Nunito',sans-serif;background:#fdf6ee;min-height:100vh;}
+    button{cursor:pointer;font-family:'Nunito',sans-serif;}
+    input{font-family:'Nunito',sans-serif;}
+    :root{
+      --cream:#fdf6ee;--sun:#FFD166;--coral:#FF6B6B;--mint:#06D6A0;
+      --sky:#4ECDC4;--blue:#2D6BE4;--navy:#1a3a6b;--purple:#9B5DE5;
+      --peach:#FF9F7F;--text:#2c2c2c;--muted:#8a8a9a;--card:#fffdf9;
+    }
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes pop{0%,100%{transform:scale(1)}50%{transform:scale(1.13)}}
+    @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+    @keyframes confettiFall{to{transform:translateY(110vh) rotate(720deg);opacity:0}}
+    @keyframes starPop{0%{transform:scale(0) rotate(-30deg);opacity:0}60%{transform:scale(1.35) rotate(5deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+  `}</style>
+);
 
-// ─── DATA ─────────────────────────────────────────────────────────────────────
+// ---
 
 // Country system: each grade has names/labels per country.
 // The grade id is the canonical age-based key (K, 1-12).
@@ -213,7 +229,7 @@ const ENCOURAGEMENTS = {
 const MASTERY_THRESHOLD = 80;
 const AVATARS = ["🦋","🐬","🦊","🐼","🦄","🐸","🦁","🐨","🦜","🐙","🌻","🌟","🎨","🎸","🚀"];
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
+// ---
 function rnd(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
 
 // Fisher-Yates shuffle, then fix any same-neighbor repeats (by topic)
@@ -260,7 +276,7 @@ function generateProblem(topic, difficulty) {
     case "percentages_intro": case "percentages": { const pcts=[10,25,50]; const p=pcts[rnd(0,pcts.length-1)]; const n2=rnd(2,10)*10; q=`What is ${p}% of ${n2}?`; a=n2*p/100; hint=`${p}% = ${p}/100`; break; }
     case "integers": { const x=rnd(-9,9),y=rnd(-9,9); q=`${x>=0?x:`(${x})`} + ${y>=0?y:`(${y})`} = ?`; a=x+y; hint="Use a number line"; break; }
     case "ratios": { const x=rnd(1,6),y=rnd(1,6),m=rnd(2,4); q=`${x} : ${y}  =  ? : ${y*m}`; a=x*m; hint="Scale both parts equally"; break; }
-    // ── Secondary / Senior topics ───────────────────────────────────────────
+    // ---
     case "algebra_intro": { const a2=rnd(1,9),b2=rnd(1,20); q=`x + ${a2} = ${a2+b2}\nFind x`; a=b2; hint="Subtract from both sides"; break; }
     case "algebra_linear": {
       if (easy) { const a2=rnd(2,9),b2=rnd(1,20); q=`${a2}x = ${a2*b2}\nFind x`; a=b2; hint="Divide both sides by "+a2; }
@@ -375,7 +391,7 @@ function generateChoices(correct) {
   return [...set].sort(() => Math.random()-0.5);
 }
 
-// ─── STORAGE ──────────────────────────────────────────────────────────────────
+// ---
 const SK          = "mathAdventure_v4";
 const SK_COUNTRY  = "mathAdventure_country";
 const SK_FAMILY   = "mathAdventure_family";
@@ -403,7 +419,7 @@ function makeProfile(name, gradeId, avatar) {
   return { id:Date.now()+Math.random(), name, gradeId, avatar, topicProgress:{}, quizHistory:[], createdAt:Date.now() };
 }
 
-// ─── MASTERY LABEL SYSTEM ─────────────────────────────────────────────────────
+// ---
 const DEFAULT_MASTERY_LABELS = {
   mastered: { label:"Mastered",  emoji:"✓",  bg:"#d4f7ec", color:"#0d6e4f" },
   learning: { label:"Learning",  emoji:"📈", bg:"#fff3cd", color:"#856404" },
@@ -425,7 +441,7 @@ function getTopicPct(profile, topic) {
   return Math.round((p.correct/p.attempts)*100);
 }
 
-// ─── FIREBASE CONFIG ──────────────────────────────────────────────────────────
+// ---
 // 🔧 REPLACE the values below with your own Firebase project config.
 //    In Firebase console: Project Settings → Your apps → SDK setup → Config
 const FIREBASE_CONFIG = {
@@ -501,7 +517,7 @@ async function loadFamilyFromFirebase(familyCode) {
 const PARENT_PIN_HASH = "1234"; // change this to your preferred parent PIN
 const ADMIN_PIN_HASH  = "9999"; // change this to your admin PIN
 
-// ─── UI ATOMS ─────────────────────────────────────────────────────────────────
+// ---
 function Page({ children }) {
   return (
     <div style={{minHeight:"100vh",
@@ -557,7 +573,7 @@ function Confetti() {
   );
 }
 
-// ─── FEEDBACK WIDGET ──────────────────────────────────────────────────────────
+// ---
 function FeedbackWidget({ familyCode, profiles }) {
   const [open,    setOpen]    = useState(false);
   const [stars,   setStars]   = useState(0);
@@ -667,7 +683,7 @@ function FeedbackWidget({ familyCode, profiles }) {
   );
 }
 
-// ─── PIN MODAL ────────────────────────────────────────────────────────────────
+// ---
 function PinModal({ title, subtitle, correctPin, onSuccess, onCancel }) {
   const [digits, setDigits] = useState("");
   const [err,    setErr]    = useState(false);
@@ -705,7 +721,7 @@ function PinModal({ title, subtitle, correctPin, onSuccess, onCancel }) {
   );
 }
 
-// ─── FAMILY SETUP SCREEN ──────────────────────────────────────────────────────
+// ---
 function FamilySetup({ onComplete }) {
   const [mode,    setMode]    = useState("choice"); // "choice" | "join"
   const [code,    setCode]    = useState("");
@@ -778,7 +794,7 @@ function FamilySetup({ onComplete }) {
   );
 }
 
-// ─── ADMIN PANEL ──────────────────────────────────────────────────────────────
+// ---
 function AdminPanel({ onClose }) {
   const [feedback, setFeedback] = useState(null);
   const [filter,   setFilter]   = useState(0); // 0=all
@@ -860,7 +876,7 @@ function AdminPanel({ onClose }) {
   );
 }
 
-// ─── PARENT PANEL ─────────────────────────────────────────────────────────────
+// ---
 function ParentPanel({ profiles, country, familyCode, labels, onUpdateLabels, onClose }) {
   const [tab, setTab] = useState("overview"); // "overview" | "labels"
   const [editLabels, setEditLabels] = useState({...labels});
@@ -1034,7 +1050,7 @@ function ParentPanel({ profiles, country, familyCode, labels, onUpdateLabels, on
     </div>
   );
 
-// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+// ---
 function MathAdventure() {
   const [profiles,      setProfilesRaw] = useState(()=>loadProfiles());
   const [activeProfile, setActiveProfile] = useState(null);
@@ -1235,7 +1251,7 @@ function MathAdventure() {
 }
 
 
-// ─── HOME SCREEN ──────────────────────────────────────────────────────────────
+// ---
 function HomeScreen({ profiles, country, labels, familyCode, onSetCountry, onSelectProfile, onCreateProfile, onParentMode, onAdminMode }) {
   const cl = COUNTRY_LABELS[country];
   return (
@@ -1334,7 +1350,7 @@ function HomeScreen({ profiles, country, labels, familyCode, onSetCountry, onSel
   );
 }
 
-// ─── CREATE PROFILE ───────────────────────────────────────────────────────────
+// ---
 function CreateProfile({ country, onSave, onBack }) {
   const [name,    setName]    = useState("");
   const [gradeId, setGradeId] = useState("3");
@@ -1385,7 +1401,7 @@ function CreateProfile({ country, onSave, onBack }) {
   );
 }
 
-// ─── EDIT PROFILE ────────────────────────────────────────────────────────────
+// ---
 function EditProfile({ profile, country, onSave, onBack }) {
   const [name,    setName]    = useState(profile.name);
   const [gradeId, setGradeId] = useState(profile.gradeId);
@@ -1451,7 +1467,7 @@ function EditProfile({ profile, country, onSave, onBack }) {
   );
 }
 
-// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+// ---
 function Dashboard({ profile, country, labels, onFlash, onQuiz, onProgress, onEdit, onHome }) {
   const grade = GRADES.find(g=>g.id===profile.gradeId);
   const gradeName = getGradeName(profile.gradeId, country);
@@ -1534,7 +1550,7 @@ function Dashboard({ profile, country, labels, onFlash, onQuiz, onProgress, onEd
   );
 }
 
-// ─── FLASH SETUP ──────────────────────────────────────────────────────────────
+// ---
 function FlashSetup({ profile, country, onStart, onBack }) {
   const grade = GRADES.find(g=>g.id===profile.gradeId);
   const [selTopics, setSelTopics] = useState([...grade.topics]);
@@ -1586,7 +1602,7 @@ function FlashSetup({ profile, country, onStart, onBack }) {
   );
 }
 
-// ─── QUIZ SETUP ───────────────────────────────────────────────────────────────
+// ---
 function QuizSetup({ profile, country, onStart, onBack }) {
   const grade = GRADES.find(g=>g.id===profile.gradeId);
   const [selTopics,  setSelTopics]  = useState([...grade.topics]);
@@ -1668,7 +1684,7 @@ function QuizSetup({ profile, country, onStart, onBack }) {
   );
 }
 
-// ─── FLASH GAME ───────────────────────────────────────────────────────────────
+// ---
 function FlashGame({ config, onExit }) {
   const [idx,     setIdx]     = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -1746,7 +1762,7 @@ function FlashGame({ config, onExit }) {
   );
 }
 
-// ─── QUIZ GAME ────────────────────────────────────────────────────────────────
+// ---
 function QuizGame({ config, onComplete, onExit }) {
   const [idx,      setIdx]      = useState(0);
   const [score,    setScore]    = useState(0);
@@ -1845,7 +1861,7 @@ function QuizGame({ config, onComplete, onExit }) {
   );
 }
 
-// ─── QUIZ RESULT ──────────────────────────────────────────────────────────────
+// ---
 function QuizResult({ result, onRetry, onHome }) {
   const { score, total, pct, answers } = result;
   const stars   = pct>=95?3:pct>=75?2:pct>=50?1:0;
@@ -1929,7 +1945,7 @@ function QuizResult({ result, onRetry, onHome }) {
   );
 }
 
-// ─── PROFILE VIEW ─────────────────────────────────────────────────────────────
+// ---
 function ProfileView({ profile, country, labels, onBack, onDelete }) {
   const grade = GRADES.find(g=>g.id===profile.gradeId);
   const gradeName = getGradeName(profile.gradeId, country);
@@ -2022,7 +2038,7 @@ function ProfileView({ profile, country, labels, onBack, onDelete }) {
   );
 }
 
-// ─── STYLE CONSTANTS ──────────────────────────────────────────────────────────
+// ---
 const S = {
   card:{background:"var(--card)",borderRadius:24,
     boxShadow:"0 4px 24px rgba(0,0,0,0.07)",
@@ -2056,9 +2072,8 @@ const S = {
     marginBottom:6,textTransform:"uppercase",letterSpacing:"0.5px"},
   badge:{borderRadius:20,padding:"4px 12px",fontWeight:800,fontSize:"0.8rem",fontFamily:"Nunito,sans-serif"},
 };
-
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(React.createElement(MathAdventure));
+const domRoot = ReactDOM.createRoot(document.getElementById('root'));
+domRoot.render(React.createElement(MathAdventure));
   </script>
 </body>
 </html>
