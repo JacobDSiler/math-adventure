@@ -29,17 +29,11 @@
 </head>
 <body>
   <div id="root"></div>
-
-  <!-- React + ReactDOM + Babel (no build step needed) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js" crossorigin></script>
-
   <script type="text/babel" data-presets="react">
     const { useState, useEffect } = React;
-
-
-
 
 // ─── DATA ─────────────────────────────────────────────────────────────────────
 
@@ -2063,10 +2057,8 @@ const S = {
   badge:{borderRadius:20,padding:"4px 12px",fontWeight:800,fontSize:"0.8rem",fontFamily:"Nunito,sans-serif"},
 };
 
-
-    // Mount the app
     const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<MathAdventure/>);
+    root.render(React.createElement(MathAdventure));
   </script>
 </body>
 </html>
