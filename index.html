@@ -791,8 +791,7 @@ f(x) = x^${n2} + ${c2}`;
       await window.emailjs.send(
         EMAILJS_SERVICE_ID,
         EMAILJS_TEMPLATE_ID,
-        { to_email: toEmail, family_code: familyCode, pin_code: loadParentPin(), app_name: "Math Adventure" },
-        { publicKey: EMAILJS_PUBLIC_KEY }
+        { to_email: toEmail, family_code: familyCode, pin_code: loadParentPin(), app_name: "Math Adventure" }
       );
       return true;
     } catch (e) {
@@ -811,8 +810,7 @@ f(x) = x^${n2} + ${c2}`;
       await window.emailjs.send(
         EMAILJS_SERVICE_ID,
         EMAILJS_TEMPLATE_ID,
-        { to_email: toEmail, pin_code: pin, app_name: "Math Adventure" },
-        { publicKey: EMAILJS_PUBLIC_KEY }
+        { to_email: toEmail, pin_code: pin, app_name: "Math Adventure" }
       );
       return true;
     } catch (e) {
@@ -864,9 +862,9 @@ f(x) = x^${n2} + ${c2}`;
     if (_db) return _db;
     try {
       const { initializeApp, getApps } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-      const { getFirestore, collection, addDoc, getDocs, query, orderBy, where } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+      const { getFirestore, collection, addDoc, getDocs, query, orderBy, where, doc, setDoc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
       const app = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
-      _db = { db: getFirestore(app), collection, addDoc, getDocs, query, orderBy, where };
+      _db = { db: getFirestore(app), collection, addDoc, getDocs, query, orderBy, where, doc, setDoc, getDoc };
       return _db;
     } catch (e) {
       console.warn("Firebase unavailable:", e);
@@ -905,16 +903,34 @@ f(x) = x^${n2} + ${c2}`;
     const fb = await getDb();
     if (!fb) return null;
     try {
-      const { db, collection, getDocs, query, where, orderBy } = fb;
-      const snap = await getDocs(
-        query(collection(db, "families"), where("familyCode", "==", familyCode), orderBy("ts", "desc"))
-      );
-      if (snap.empty) return null;
-      return snap.docs[0].data().profiles || null;
+      const { db, doc, getDoc } = fb;
+      const snap = await getDoc(doc(db, "families", familyCode));
+      if (!snap.exists()) return null;
+      return snap.data().profiles || null;
     } catch (e) {
       console.warn("loadFamilyFromFirebase:", e);
       return null;
     }
+  }
+  // Debounce timer for Firebase saves (avoid hammering on rapid changes)
+  let _fbSaveTimer = null;
+  async function saveFamilyToFirebase(familyCode, profiles) {
+    if (!familyCode) return;
+    clearTimeout(_fbSaveTimer);
+    _fbSaveTimer = setTimeout(async () => {
+      const fb = await getDb();
+      if (!fb) return;
+      try {
+        const { db, doc, setDoc } = fb;
+        await setDoc(doc(db, "families", familyCode), {
+          familyCode,
+          profiles,
+          ts: Date.now()
+        });
+      } catch (e) {
+        console.warn("saveFamilyToFirebase:", e);
+      }
+    }, 1500);
   }
   const ADMIN_PIN_HASH = "9999";
   function Page({ children }) {
@@ -1566,9 +1582,13 @@ f(x) = x^${n2} + ${c2}`;
       setLabelsRaw(l);
       saveCustomLabels(l);
     };
+    const familyCodeRef = React.useRef(familyCode);
+    React.useEffect(() => { familyCodeRef.current = familyCode; }, [familyCode]);
     const setProfiles = (p) => {
       setProfilesRaw(p);
       saveProfiles(p);
+      // Sync to Firebase so all family devices stay up to date
+      if (familyCodeRef.current) saveFamilyToFirebase(familyCodeRef.current, p);
     };
     const patchProfile = (id, fn) => {
       const next = profiles.map((p) => p.id === id ? fn(p) : p);
@@ -1602,7 +1622,12 @@ f(x) = x^${n2} + ${c2}`;
     };
     const handleFamilyComplete = (fc, remoteProfiles) => {
       setFamilyCode(fc);
-      if (remoteProfiles) setProfiles(remoteProfiles);
+      if (remoteProfiles) {
+        setProfiles(remoteProfiles);
+      } else if (profiles.length > 0) {
+        // Existing profiles on this device — push them to Firebase now
+        saveFamilyToFirebase(fc, profiles);
+      }
       setShowFamilySetup(false);
     };
     return /* @__PURE__ */ React.createElement(React.Fragment, null, showConfetti && /* @__PURE__ */ React.createElement(Confetti, null), showFamilySetup && /* @__PURE__ */ React.createElement(FamilySetup, { onComplete: handleFamilyComplete }), showParentPin && /* @__PURE__ */ React.createElement(
