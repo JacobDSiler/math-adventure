@@ -693,6 +693,8 @@ f(x) = x^${n2} + ${c2}`;
   const SK_COUNTRY = "mathAdventure_country";
   const SK_FAMILY = "mathAdventure_family";
   const SK_LABELS = "mathAdventure_labels";
+  const SK_PARENT_PIN = "mathAdventure_parentPin";
+  const SK_RECOVERY_EMAIL = "mathAdventure_recoveryEmail";
   function loadProfiles() {
     try {
       return JSON.parse(localStorage.getItem(SK) || "[]");
@@ -742,6 +744,32 @@ f(x) = x^${n2} + ${c2}`;
   function saveCustomLabels(l) {
     try {
       localStorage.setItem(SK_LABELS, JSON.stringify(l));
+    } catch {
+    }
+  }
+  function loadParentPin() {
+    try {
+      return localStorage.getItem(SK_PARENT_PIN) || "1234";
+    } catch {
+      return "1234";
+    }
+  }
+  function saveParentPin(p) {
+    try {
+      localStorage.setItem(SK_PARENT_PIN, p);
+    } catch {
+    }
+  }
+  function loadRecoveryEmail() {
+    try {
+      return localStorage.getItem(SK_RECOVERY_EMAIL) || "";
+    } catch {
+      return "";
+    }
+  }
+  function saveRecoveryEmail(e) {
+    try {
+      localStorage.setItem(SK_RECOVERY_EMAIL, e);
     } catch {
     }
   }
@@ -839,7 +867,6 @@ f(x) = x^${n2} + ${c2}`;
       return null;
     }
   }
-  const PARENT_PIN_HASH = "1234";
   const ADMIN_PIN_HASH = "9999";
   function Page({ children }) {
     return /* @__PURE__ */ React.createElement("div", { style: {
@@ -1171,10 +1198,157 @@ f(x) = x^${n2} + ${c2}`;
   }
   function ParentPanel({ profiles, country, familyCode, labels, onUpdateLabels, onClose }) {
     const [tab, setTab] = useState("overview");
-    const [editLabels, setEditLabels] = useState({ ...labels });
+    const [editLabels, setEditLabels] = useState(JSON.parse(JSON.stringify(labels)));
+    const [labelSaved, setLabelSaved] = useState(false);
+    const [selectedProfile, setSelectedProfile] = useState(null);
+    const [pinTab, setPinTab] = useState(false);
+    const [newPin, setNewPin] = useState("");
+    const [confirmPin, setConfirmPin] = useState("");
+    const [pinEmail, setPinEmail] = useState(() => loadRecoveryEmail());
+    const [pinErr, setPinErr] = useState("");
+    const [pinSaved, setPinSaved] = useState(false);
+    const isDefaultPin = loadParentPin() === "1234";
     const handleSaveLabels = () => {
       onUpdateLabels(editLabels);
+      setLabelSaved(true);
+      setTimeout(() => setLabelSaved(false), 2e3);
     };
+    const handleSavePin = () => {
+      if (newPin.length < 4) {
+        setPinErr("PIN must be at least 4 digits.");
+        return;
+      }
+      if (newPin !== confirmPin) {
+        setPinErr("PINs don't match \u2014 try again.");
+        return;
+      }
+      saveParentPin(newPin);
+      if (pinEmail.trim()) saveRecoveryEmail(pinEmail.trim());
+      setPinErr("");
+      setPinSaved(true);
+      setNewPin("");
+      setConfirmPin("");
+      setTimeout(() => {
+        setPinSaved(false);
+        setPinTab(false);
+      }, 2200);
+    };
+    if (selectedProfile) {
+      const profile = selectedProfile;
+      const grade = GRADES.find((g) => g.id === profile.gradeId);
+      const gName = getGradeName(profile.gradeId, country);
+      const topics = grade?.topics || [];
+      const recent = profile.quizHistory.slice(-10).reverse();
+      return /* @__PURE__ */ React.createElement("div", { style: {
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.55)",
+        zIndex: 960,
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "center",
+        padding: 16,
+        overflowY: "auto"
+      } }, /* @__PURE__ */ React.createElement("div", { style: {
+        background: "#fffdf9",
+        borderRadius: 24,
+        padding: 24,
+        maxWidth: 600,
+        width: "100%",
+        marginTop: 20,
+        boxShadow: "0 8px 40px rgba(0,0,0,0.2)",
+        animation: "fadeUp 0.3s ease"
+      } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginBottom: 20 } }, /* @__PURE__ */ React.createElement("button", { style: S.backBtn, onClick: () => setSelectedProfile(null) }, "\u2190 Back"), /* @__PURE__ */ React.createElement("span", { style: { fontSize: "2rem" } }, profile.avatar), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "'Baloo 2',cursive", fontSize: "1.2rem", fontWeight: 800, color: "var(--navy)" } }, profile.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.78rem", color: "var(--muted)", fontWeight: 600 } }, grade?.emoji, " ", gName, " \xB7 Age ", grade?.age))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, topics.map((t) => {
+        const status = getTopicMastery(profile, t);
+        const pct = getTopicPct(profile, t);
+        const prog = profile.topicProgress[t];
+        return /* @__PURE__ */ React.createElement("div", { key: t, style: {
+          padding: "10px 14px",
+          borderRadius: 14,
+          background: status === "mastered" ? "#f0faf5" : status === "learning" ? "#fffbec" : status === "growing" ? "#fff0f3" : "#f8f8f8",
+          border: `1.5px solid ${status === "mastered" ? "#b6eedd" : status === "learning" ? "#ffe9a0" : status === "growing" ? "#ffc8d2" : "#e8e8e8"}`
+        } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: pct !== null ? 6 : 0 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: "1rem" } }, TOPIC_EMOJIS[t]), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: "0.87rem", flex: 1 } }, TOPIC_LABELS[t]), /* @__PURE__ */ React.createElement(MasteryBadge, { status, labels })), prog && prog.attempts > 0 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(ProgressBar, { pct: pct || 0, color: grade?.color || "#06D6A0" }), /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.7rem", color: "var(--muted)", fontWeight: 700, marginTop: 3 } }, prog.correct, "/", prog.attempts, " correct (", pct, "%)")));
+      })), recent.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 20 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "'Baloo 2',cursive", fontWeight: 800, color: "var(--navy)", marginBottom: 10 } }, "Recent Quizzes"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, recent.map((q, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "8px 12px",
+        background: "#f9f9f9",
+        borderRadius: 12
+      } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, fontSize: "0.84rem" } }, q.score, "/", q.total, " (", q.pct, "%)"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.7rem", color: "var(--muted)", fontWeight: 600 } }, new Date(q.date).toLocaleDateString("en-IE", { day: "numeric", month: "short", year: "numeric" }))), /* @__PURE__ */ React.createElement(
+        ProgressBar,
+        {
+          pct: q.pct,
+          height: 6,
+          color: q.pct >= 80 ? "#06D6A0" : q.pct >= 50 ? "#FFD166" : "#FF9F7F"
+        }
+      ), /* @__PURE__ */ React.createElement("span", { style: { fontSize: "0.85rem", minWidth: 36 } }, "\u2B50".repeat(q.pct >= 95 ? 3 : q.pct >= 75 ? 2 : q.pct >= 50 ? 1 : 0))))))));
+    }
+    if (pinTab) {
+      return /* @__PURE__ */ React.createElement("div", { style: {
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.55)",
+        zIndex: 960,
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "center",
+        padding: 16,
+        overflowY: "auto"
+      } }, /* @__PURE__ */ React.createElement("div", { style: {
+        background: "#fffdf9",
+        borderRadius: 24,
+        padding: 24,
+        maxWidth: 420,
+        width: "100%",
+        marginTop: 20,
+        boxShadow: "0 8px 40px rgba(0,0,0,0.2)",
+        animation: "fadeUp 0.3s ease"
+      } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 20 } }, /* @__PURE__ */ React.createElement("button", { style: S.backBtn, onClick: () => {
+        setPinTab(false);
+        setPinErr("");
+      } }, "\u2190 Back"), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "'Baloo 2',cursive", fontSize: "1.2rem", fontWeight: 800, color: "var(--navy)" } }, "\u{1F511} Change Parent PIN")), /* @__PURE__ */ React.createElement("p", { style: { color: "var(--muted)", fontWeight: 600, fontSize: "0.85rem", marginBottom: 20, lineHeight: 1.6 } }, "Choose a new PIN for Parent & Teacher Mode. Anyone with this PIN can view all learner progress and settings."), /* @__PURE__ */ React.createElement("label", { style: S.inputLabel }, "New PIN (4\u20136 digits)"), /* @__PURE__ */ React.createElement(
+        "input",
+        {
+          type: "password",
+          inputMode: "numeric",
+          maxLength: 6,
+          style: { ...S.input, textAlign: "center", fontSize: "1.3rem", letterSpacing: 6 },
+          value: newPin,
+          onChange: (e) => setNewPin(e.target.value.replace(/\D/g, "")),
+          placeholder: "\u2022\u2022\u2022\u2022"
+        }
+      ), /* @__PURE__ */ React.createElement("label", { style: S.inputLabel }, "Confirm New PIN"), /* @__PURE__ */ React.createElement(
+        "input",
+        {
+          type: "password",
+          inputMode: "numeric",
+          maxLength: 6,
+          style: { ...S.input, textAlign: "center", fontSize: "1.3rem", letterSpacing: 6 },
+          value: confirmPin,
+          onChange: (e) => setConfirmPin(e.target.value.replace(/\D/g, "")),
+          placeholder: "\u2022\u2022\u2022\u2022"
+        }
+      ), /* @__PURE__ */ React.createElement("label", { style: S.inputLabel }, "Recovery Email (optional)"), /* @__PURE__ */ React.createElement(
+        "input",
+        {
+          type: "email",
+          inputMode: "email",
+          style: S.input,
+          value: pinEmail,
+          onChange: (e) => setPinEmail(e.target.value),
+          placeholder: "e.g. parent@email.com"
+        }
+      ), /* @__PURE__ */ React.createElement("p", { style: { fontSize: "0.73rem", color: "var(--muted)", fontWeight: 600, marginTop: -10, marginBottom: 16, lineHeight: 1.5 } }, "If you forget your PIN, we'll show this email as a reminder of where to look. Your email is stored only on this device."), pinErr && /* @__PURE__ */ React.createElement("div", { style: { color: "var(--coral)", fontWeight: 700, fontSize: "0.83rem", marginBottom: 12, textAlign: "center" } }, pinErr), pinSaved && /* @__PURE__ */ React.createElement("div", { style: { color: "#0d6e4f", fontWeight: 800, fontSize: "0.9rem", marginBottom: 12, textAlign: "center" } }, "\u2713 PIN saved!"), /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          style: { ...S.btnPrimary, width: "100%", opacity: newPin.length >= 4 && confirmPin.length >= 4 ? 1 : 0.45 },
+          disabled: newPin.length < 4 || confirmPin.length < 4,
+          onClick: handleSavePin
+        },
+        "Save New PIN \u{1F511}"
+      )));
+    }
     return /* @__PURE__ */ React.createElement("div", { style: {
       position: "fixed",
       inset: 0,
@@ -1194,7 +1368,17 @@ f(x) = x^${n2} + ${c2}`;
       marginTop: 20,
       boxShadow: "0 8px 40px rgba(0,0,0,0.2)",
       animation: "fadeUp 0.3s ease"
-    } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "'Baloo 2',cursive", fontSize: "1.3rem", fontWeight: 800, color: "var(--navy)" } }, "\u{1F468}\u200D\u{1F469}\u200D\u{1F467} Parent & Teacher Mode"), /* @__PURE__ */ React.createElement("button", { style: S.backBtn, onClick: onClose }, "\u2715 Close")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.78rem", color: "var(--muted)", fontWeight: 600, marginBottom: 16 } }, "Family code: ", /* @__PURE__ */ React.createElement("strong", { style: { color: "var(--navy)", letterSpacing: 2 } }, familyCode), /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 8, fontSize: "0.72rem", opacity: 0.7 } }, "\xB7 Share this so family members can join on other devices")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 20 } }, [["overview", "\u{1F4CA} Overview"], ["labels", "\u{1F3F7}\uFE0F Custom Labels"]].map(([t, l]) => /* @__PURE__ */ React.createElement("button", { key: t, onClick: () => setTab(t), style: {
+    } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "'Baloo 2',cursive", fontSize: "1.3rem", fontWeight: 800, color: "var(--navy)" } }, "\u{1F468}\u200D\u{1F469}\u200D\u{1F467} Parent & Teacher Mode"), /* @__PURE__ */ React.createElement("button", { style: S.backBtn, onClick: onClose }, "\u2715 Close")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.78rem", color: "var(--muted)", fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 } }, /* @__PURE__ */ React.createElement("span", null, "Family code: ", /* @__PURE__ */ React.createElement("strong", { style: { color: "var(--navy)", letterSpacing: 2 } }, familyCode), /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 6, opacity: 0.7 } }, "\xB7 Share so family can join on other devices")), /* @__PURE__ */ React.createElement("button", { onClick: () => setPinTab(true), style: {
+      background: isDefaultPin ? "#fff8e1" : "#f0f0f0",
+      border: `1.5px solid ${isDefaultPin ? "#FFD166" : "#ddd"}`,
+      borderRadius: 20,
+      padding: "3px 10px",
+      fontSize: "0.72rem",
+      fontWeight: 800,
+      color: isDefaultPin ? "#856404" : "var(--muted)",
+      cursor: "pointer",
+      flexShrink: 0
+    } }, isDefaultPin ? "\u26A0\uFE0F Change PIN" : "\u{1F511} Change PIN")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 20 } }, [["overview", "\u{1F4CA} Overview"], ["labels", "\u{1F3F7}\uFE0F Custom Labels"]].map(([t, l]) => /* @__PURE__ */ React.createElement("button", { key: t, onClick: () => setTab(t), style: {
       border: `2px solid ${tab === t ? "var(--blue)" : "#e0e0e0"}`,
       background: tab === t ? "#eaf0ff" : "#fafafa",
       borderRadius: 20,
@@ -1202,57 +1386,41 @@ f(x) = x^${n2} + ${c2}`;
       fontWeight: 800,
       fontSize: "0.85rem",
       color: tab === t ? "var(--blue)" : "var(--muted)"
-    } }, l))), tab === "overview" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 16 } }, profiles.map((profile) => {
+    } }, l))), tab === "overview" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, profiles.map((profile) => {
       const grade = GRADES.find((g) => g.id === profile.gradeId);
       const gName = getGradeName(profile.gradeId, country);
       const topics = grade?.topics || [];
-      const topicStats = topics.map((t) => ({
-        t,
-        status: getTopicMastery(profile, t),
-        pct: getTopicPct(profile, t)
-      }));
+      const topicStats = topics.map((t) => ({ t, status: getTopicMastery(profile, t), pct: getTopicPct(profile, t) }));
       const strengths = topicStats.filter((x) => x.status === "mastered");
       const weak = topicStats.filter((x) => x.status === "growing");
       const inProg = topicStats.filter((x) => x.status === "learning");
       const recent = profile.quizHistory.slice(-3).reverse();
-      return /* @__PURE__ */ React.createElement("div", { key: profile.id, style: {
-        border: `2px solid ${grade?.color || "#eee"}`,
-        borderRadius: 18,
-        padding: 16,
-        background: `linear-gradient(135deg,${grade?.color || "#eee"}11,#fff)`
-      } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 12 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: "2rem" } }, profile.avatar), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, fontSize: "1rem", color: "var(--navy)" } }, profile.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.78rem", color: "var(--muted)", fontWeight: 600 } }, grade?.emoji, " ", gName, " \xB7 Age ", grade?.age)), /* @__PURE__ */ React.createElement("div", { style: { marginLeft: "auto", textAlign: "right" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.72rem", color: "var(--muted)", fontWeight: 600 } }, profile.quizHistory.length, " quizzes"))), strengths.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.72rem", fontWeight: 800, color: "#0d6e4f", marginBottom: 4, textTransform: "uppercase" } }, "\u{1F4AA} Strengths"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 4 } }, strengths.map((x) => /* @__PURE__ */ React.createElement("span", { key: x.t, style: {
-        background: "#d4f7ec",
-        color: "#0d6e4f",
-        borderRadius: 20,
-        padding: "2px 9px",
-        fontSize: "0.73rem",
-        fontWeight: 700
-      } }, TOPIC_EMOJIS[x.t], " ", TOPIC_LABELS[x.t])))), inProg.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.72rem", fontWeight: 800, color: "#856404", marginBottom: 4, textTransform: "uppercase" } }, "\u{1F4C8} In Progress"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 4 } }, inProg.map((x) => /* @__PURE__ */ React.createElement("span", { key: x.t, style: {
-        background: "#fff3cd",
-        color: "#856404",
-        borderRadius: 20,
-        padding: "2px 9px",
-        fontSize: "0.73rem",
-        fontWeight: 700
-      } }, TOPIC_EMOJIS[x.t], " ", TOPIC_LABELS[x.t], " ", x.pct !== null ? `${x.pct}%` : "")))), weak.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.72rem", fontWeight: 800, color: "#cc2244", marginBottom: 4, textTransform: "uppercase" } }, "\u{1F3AF} Needs Attention"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 4 } }, weak.map((x) => /* @__PURE__ */ React.createElement("span", { key: x.t, style: {
-        background: "#fde8ed",
-        color: "#cc2244",
-        borderRadius: 20,
-        padding: "2px 9px",
-        fontSize: "0.73rem",
-        fontWeight: 700
-      } }, TOPIC_EMOJIS[x.t], " ", TOPIC_LABELS[x.t], " ", x.pct !== null ? `${x.pct}%` : "")))), recent.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.72rem", fontWeight: 800, color: "var(--muted)", marginBottom: 4, textTransform: "uppercase" } }, "Recent quizzes"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap" } }, recent.map((q, i) => /* @__PURE__ */ React.createElement("span", { key: i, style: {
-        background: "#f0f0f0",
-        borderRadius: 12,
-        padding: "3px 10px",
-        fontSize: "0.73rem",
-        fontWeight: 700,
-        color: "var(--text)"
-      } }, q.pct, "% \xB7 ", new Date(q.date).toLocaleDateString("en-IE", { day: "numeric", month: "short" }))))));
+      return /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          key: profile.id,
+          onClick: () => setSelectedProfile(profile),
+          style: {
+            border: `2px solid ${grade?.color || "#eee"}`,
+            borderRadius: 18,
+            padding: 16,
+            background: `linear-gradient(135deg,${grade?.color || "#eee"}11,#fff)`,
+            textAlign: "left",
+            cursor: "pointer",
+            fontFamily: "Nunito,sans-serif",
+            width: "100%"
+          }
+        },
+        /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: strengths.length || inProg.length || weak.length ? 10 : 0 } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: "2rem" } }, profile.avatar), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, fontSize: "1rem", color: "var(--navy)" } }, profile.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.78rem", color: "var(--muted)", fontWeight: 600 } }, grade?.emoji, " ", gName, " \xB7 Age ", grade?.age)), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.72rem", color: "var(--muted)", fontWeight: 600 } }, profile.quizHistory.length, " quizzes"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.72rem", color: "var(--blue)", fontWeight: 700, marginTop: 2 } }, "View detail \u2192"))),
+        strengths.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 6 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.68rem", fontWeight: 800, color: "#0d6e4f", marginBottom: 3, textTransform: "uppercase" } }, "\u{1F4AA} Strengths"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 3 } }, strengths.map((x) => /* @__PURE__ */ React.createElement("span", { key: x.t, style: { background: "#d4f7ec", color: "#0d6e4f", borderRadius: 20, padding: "1px 8px", fontSize: "0.7rem", fontWeight: 700 } }, TOPIC_EMOJIS[x.t], " ", TOPIC_LABELS[x.t])))),
+        inProg.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 6 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.68rem", fontWeight: 800, color: "#856404", marginBottom: 3, textTransform: "uppercase" } }, "\u{1F4C8} In Progress"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 3 } }, inProg.map((x) => /* @__PURE__ */ React.createElement("span", { key: x.t, style: { background: "#fff3cd", color: "#856404", borderRadius: 20, padding: "1px 8px", fontSize: "0.7rem", fontWeight: 700 } }, TOPIC_EMOJIS[x.t], " ", TOPIC_LABELS[x.t], x.pct !== null ? ` ${x.pct}%` : "")))),
+        weak.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 6 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.68rem", fontWeight: 800, color: "#cc2244", marginBottom: 3, textTransform: "uppercase" } }, "\u{1F3AF} Needs Attention"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 3 } }, weak.map((x) => /* @__PURE__ */ React.createElement("span", { key: x.t, style: { background: "#fde8ed", color: "#cc2244", borderRadius: 20, padding: "1px 8px", fontSize: "0.7rem", fontWeight: 700 } }, TOPIC_EMOJIS[x.t], " ", TOPIC_LABELS[x.t], x.pct !== null ? ` ${x.pct}%` : "")))),
+        recent.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 5, flexWrap: "wrap", marginTop: 4 } }, recent.map((q, i) => /* @__PURE__ */ React.createElement("span", { key: i, style: { background: "#f0f0f0", borderRadius: 10, padding: "2px 8px", fontSize: "0.7rem", fontWeight: 700, color: "var(--text)" } }, q.pct, "%")))
+      );
     })), tab === "labels" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { style: { color: "var(--muted)", fontWeight: 600, fontSize: "0.85rem", marginBottom: 16, lineHeight: 1.5 } }, "Rename the progress labels shown to students. Use words that feel encouraging and right for your family."), ["mastered", "learning", "growing", "new"].map((key) => {
       const def = DEFAULT_MASTERY_LABELS[key];
       const cur = editLabels[key];
-      return /* @__PURE__ */ React.createElement("div", { key, style: { marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 6 } }, /* @__PURE__ */ React.createElement("span", { style: {
+      return /* @__PURE__ */ React.createElement("div", { key, style: { marginBottom: 14, padding: "12px 14px", borderRadius: 14, background: "#fafafa", border: "1.5px solid #eee" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 8 } }, /* @__PURE__ */ React.createElement("span", { style: {
         background: def.bg,
         color: def.color,
         borderRadius: 20,
@@ -1261,7 +1429,7 @@ f(x) = x^${n2} + ${c2}`;
         fontWeight: 800,
         minWidth: 90,
         textAlign: "center"
-      } }, "Default: ", def.label), /* @__PURE__ */ React.createElement("span", { style: { fontSize: "0.78rem", color: "var(--muted)", fontWeight: 600 } }, "\u2192 shown as:")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement(
+      } }, "Default: ", def.label), /* @__PURE__ */ React.createElement("span", { style: { fontSize: "0.78rem", color: "var(--muted)", fontWeight: 600 } }, "\u2192 rename to:")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center" } }, /* @__PURE__ */ React.createElement(
         "input",
         {
           style: { ...S.input, marginBottom: 0, flex: 2 },
@@ -1273,20 +1441,30 @@ f(x) = x^${n2} + ${c2}`;
       ), /* @__PURE__ */ React.createElement(
         "input",
         {
-          style: { ...S.input, marginBottom: 0, flex: 1, textAlign: "center" },
+          style: { ...S.input, marginBottom: 0, width: 64, textAlign: "center", flexShrink: 0 },
           value: cur.emoji,
           onChange: (e) => setEditLabels((prev) => ({ ...prev, [key]: { ...prev[key], emoji: e.target.value } })),
           placeholder: def.emoji,
           maxLength: 4
         }
-      )), /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.7rem", color: "var(--muted)", fontWeight: 600, marginTop: 4 } }, "Preview: ", /* @__PURE__ */ React.createElement("span", { style: { background: cur.bg, color: cur.color, borderRadius: 20, padding: "2px 9px", fontWeight: 800 } }, cur.label, " ", cur.emoji)));
-    }), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnPrimary, width: "100%", marginTop: 8 }, onClick: handleSaveLabels }, "Save Labels \u2713"), /* @__PURE__ */ React.createElement(
+      ), /* @__PURE__ */ React.createElement("span", { style: {
+        background: cur.bg,
+        color: cur.color,
+        borderRadius: 20,
+        padding: "4px 12px",
+        fontSize: "0.78rem",
+        fontWeight: 800,
+        whiteSpace: "nowrap",
+        flexShrink: 0
+      } }, cur.label || def.label, " ", cur.emoji || def.emoji)));
+    }), labelSaved && /* @__PURE__ */ React.createElement("div", { style: { color: "#0d6e4f", fontWeight: 800, fontSize: "0.9rem", textAlign: "center", marginBottom: 8 } }, "\u2713 Labels saved!"), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnPrimary, width: "100%", marginTop: 4 }, onClick: handleSaveLabels }, "Save Labels \u2713"), /* @__PURE__ */ React.createElement(
       "button",
       {
         style: { ...S.btnSecondary, width: "100%", marginTop: 8 },
         onClick: () => {
-          setEditLabels({ ...DEFAULT_MASTERY_LABELS });
-          onUpdateLabels(DEFAULT_MASTERY_LABELS);
+          const reset = { ...DEFAULT_MASTERY_LABELS };
+          setEditLabels(reset);
+          onUpdateLabels(reset);
         }
       },
       "Reset to Defaults"
@@ -1359,7 +1537,7 @@ f(x) = x^${n2} + ${c2}`;
       {
         title: "Parent & Teacher Mode",
         subtitle: "Enter your parent PIN to continue",
-        correctPin: PARENT_PIN_HASH,
+        correctPin: loadParentPin(),
         onSuccess: () => {
           setShowParentPin(false);
           setShowParent(true);
