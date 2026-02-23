@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800;900&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <!-- EmailJS — needed for PIN recovery email. Remove if not using. -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     body{font-family:'Nunito',sans-serif;background:#fdf6ee;min-height:100vh;}
@@ -773,6 +775,27 @@ f(x) = x^${n2} + ${c2}`;
     } catch {
     }
   }
+  const EMAILJS_SERVICE_ID = "YOUR_SERVICE_ID";
+  const EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID";
+  const EMAILJS_PUBLIC_KEY = "YOUR_PUBLIC_KEY";
+  async function sendPinEmail(toEmail, pin) {
+    try {
+      if (!window.emailjs) {
+        console.warn("EmailJS not loaded");
+        return false;
+      }
+      await window.emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        { to_email: toEmail, pin_code: pin, app_name: "Math Adventure" },
+        { publicKey: EMAILJS_PUBLIC_KEY }
+      );
+      return true;
+    } catch (e) {
+      console.error("EmailJS error:", e);
+      return false;
+    }
+  }
   function genFamilyCode() {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let s = "MA-";
@@ -1213,7 +1236,9 @@ f(x) = x^${n2} + ${c2}`;
       setLabelSaved(true);
       setTimeout(() => setLabelSaved(false), 2e3);
     };
-    const handleSavePin = () => {
+    const [emailSending, setEmailSending] = useState(false);
+    const [emailStatus, setEmailStatus] = useState("");
+    const handleSavePin = async () => {
       if (newPin.length < 4) {
         setPinErr("PIN must be at least 4 digits.");
         return;
@@ -1223,7 +1248,14 @@ f(x) = x^${n2} + ${c2}`;
         return;
       }
       saveParentPin(newPin);
-      if (pinEmail.trim()) saveRecoveryEmail(pinEmail.trim());
+      const email = pinEmail.trim();
+      if (email) {
+        saveRecoveryEmail(email);
+        setEmailSending(true);
+        const ok = await sendPinEmail(email, newPin);
+        setEmailSending(false);
+        setEmailStatus(ok ? "sent" : "failed");
+      }
       setPinErr("");
       setPinSaved(true);
       setNewPin("");
@@ -1231,7 +1263,8 @@ f(x) = x^${n2} + ${c2}`;
       setTimeout(() => {
         setPinSaved(false);
         setPinTab(false);
-      }, 2200);
+        setEmailStatus("");
+      }, 3e3);
     };
     if (selectedProfile) {
       const profile = selectedProfile;
@@ -1329,7 +1362,7 @@ f(x) = x^${n2} + ${c2}`;
           onChange: (e) => setConfirmPin(e.target.value.replace(/\D/g, "")),
           placeholder: "\u2022\u2022\u2022\u2022"
         }
-      ), /* @__PURE__ */ React.createElement("label", { style: S.inputLabel }, "Recovery Email (optional)"), /* @__PURE__ */ React.createElement(
+      ), /* @__PURE__ */ React.createElement("label", { style: S.inputLabel }, "Send PIN to email (optional)"), /* @__PURE__ */ React.createElement(
         "input",
         {
           type: "email",
@@ -1339,14 +1372,14 @@ f(x) = x^${n2} + ${c2}`;
           onChange: (e) => setPinEmail(e.target.value),
           placeholder: "e.g. parent@email.com"
         }
-      ), /* @__PURE__ */ React.createElement("p", { style: { fontSize: "0.73rem", color: "var(--muted)", fontWeight: 600, marginTop: -10, marginBottom: 16, lineHeight: 1.5 } }, "If you forget your PIN, we'll show this email as a reminder of where to look. Your email is stored only on this device."), pinErr && /* @__PURE__ */ React.createElement("div", { style: { color: "var(--coral)", fontWeight: 700, fontSize: "0.83rem", marginBottom: 12, textAlign: "center" } }, pinErr), pinSaved && /* @__PURE__ */ React.createElement("div", { style: { color: "#0d6e4f", fontWeight: 800, fontSize: "0.9rem", marginBottom: 12, textAlign: "center" } }, "\u2713 PIN saved!"), /* @__PURE__ */ React.createElement(
+      ), /* @__PURE__ */ React.createElement("p", { style: { fontSize: "0.73rem", color: "var(--muted)", fontWeight: 600, marginTop: -10, marginBottom: 16, lineHeight: 1.5 } }, "We'll email your new PIN to this address so you have it saved safely."), pinErr && /* @__PURE__ */ React.createElement("div", { style: { color: "var(--coral)", fontWeight: 700, fontSize: "0.83rem", marginBottom: 12, textAlign: "center" } }, pinErr), pinSaved && !emailSending && /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 12, textAlign: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { color: "#0d6e4f", fontWeight: 800, fontSize: "0.9rem" } }, "\u2713 PIN saved!"), pinEmail.trim() && emailStatus === "sent" && /* @__PURE__ */ React.createElement("div", { style: { color: "#0d6e4f", fontWeight: 700, fontSize: "0.8rem", marginTop: 4 } }, "\u{1F4E7} PIN emailed to ", pinEmail), pinEmail.trim() && emailStatus === "failed" && /* @__PURE__ */ React.createElement("div", { style: { color: "var(--coral)", fontWeight: 700, fontSize: "0.8rem", marginTop: 4 } }, "Email failed \u2014 check your EmailJS setup")), emailSending && /* @__PURE__ */ React.createElement("div", { style: { color: "var(--blue)", fontWeight: 700, fontSize: "0.83rem", marginBottom: 12, textAlign: "center" } }, "\u{1F4E7} Sending email\u2026"), /* @__PURE__ */ React.createElement(
         "button",
         {
-          style: { ...S.btnPrimary, width: "100%", opacity: newPin.length >= 4 && confirmPin.length >= 4 ? 1 : 0.45 },
-          disabled: newPin.length < 4 || confirmPin.length < 4,
+          style: { ...S.btnPrimary, width: "100%", opacity: newPin.length >= 4 && confirmPin.length >= 4 && !emailSending ? 1 : 0.45 },
+          disabled: newPin.length < 4 || confirmPin.length < 4 || emailSending,
           onClick: handleSavePin
         },
-        "Save New PIN \u{1F511}"
+        emailSending ? "Saving\u2026" : "Save PIN & Send Email \u{1F511}"
       )));
     }
     return /* @__PURE__ */ React.createElement("div", { style: {
@@ -1698,7 +1731,7 @@ f(x) = x^${n2} + ${c2}`;
       color: "var(--navy)",
       letterSpacing: "-1px",
       textShadow: "2px 3px 0 rgba(26,58,107,0.1)"
-    } }, "Math Adventure"), /* @__PURE__ */ React.createElement("p", { style: { color: "var(--muted)", fontWeight: 700, fontSize: "0.95rem", marginTop: 4 } }, "A joyful homeschool maths companion")), /* @__PURE__ */ React.createElement("div", { style: {
+    } }, "Math Adventure"), /* @__PURE__ */ React.createElement("p", { style: { color: "var(--muted)", fontWeight: 700, fontSize: "0.95rem", marginTop: 4 } }, "A joyful homeschool ", country === "US" ? "math" : "maths", " companion")), /* @__PURE__ */ React.createElement("div", { style: {
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
