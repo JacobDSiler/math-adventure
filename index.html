@@ -899,6 +899,7 @@ f(x) = x^${n2} + ${c2}`;
       return [];
     }
   }
+  // Returns { profiles, parentPin } or null
   async function loadFamilyFromFirebase(familyCode) {
     const fb = await getDb();
     if (!fb) return null;
@@ -906,15 +907,15 @@ f(x) = x^${n2} + ${c2}`;
       const { db, doc, getDoc } = fb;
       const snap = await getDoc(doc(db, "families", familyCode));
       if (!snap.exists()) return null;
-      return snap.data().profiles || null;
+      const data = snap.data();
+      return { profiles: data.profiles || [], parentPin: data.parentPin || null };
     } catch (e) {
       console.warn("loadFamilyFromFirebase:", e);
       return null;
     }
   }
-  // Debounce timer for Firebase saves (avoid hammering on rapid changes)
   let _fbSaveTimer = null;
-  async function saveFamilyToFirebase(familyCode, profiles) {
+  function saveFamilyToFirebase(familyCode, profiles, parentPin) {
     if (!familyCode) return;
     clearTimeout(_fbSaveTimer);
     _fbSaveTimer = setTimeout(async () => {
@@ -922,11 +923,11 @@ f(x) = x^${n2} + ${c2}`;
       if (!fb) return;
       try {
         const { db, doc, setDoc } = fb;
-        await setDoc(doc(db, "families", familyCode), {
-          familyCode,
-          profiles,
-          ts: Date.now()
-        });
+        const payload = { ts: Date.now() };
+        if (profiles !== null) payload.profiles = profiles;
+        if (parentPin !== undefined) payload.parentPin = parentPin;
+        await setDoc(doc(db, "families", familyCode), payload, { merge: true });
+        console.log("Saved to Firebase:", familyCode);
       } catch (e) {
         console.warn("saveFamilyToFirebase:", e);
       }
@@ -1190,14 +1191,18 @@ f(x) = x^${n2} + ${c2}`;
       }
       setLoading(true);
       setErr("");
-      const remoteProfiles = await loadFamilyFromFirebase(trimmed);
+      const remote = await loadFamilyFromFirebase(trimmed);
       setLoading(false);
-      if (remoteProfiles) {
-        saveFamilyCode(trimmed);
-        saveProfiles(remoteProfiles);
-        onComplete(trimmed, remoteProfiles);
+      saveFamilyCode(trimmed);
+      if (remote) {
+        if (remote.profiles && remote.profiles.length > 0) {
+          saveProfiles(remote.profiles);
+        }
+        if (remote.parentPin) {
+          saveParentPin(remote.parentPin);
+        }
+        onComplete(trimmed, remote.profiles && remote.profiles.length > 0 ? remote.profiles : null);
       } else {
-        saveFamilyCode(trimmed);
         onComplete(trimmed, null);
       }
     };
@@ -1304,6 +1309,10 @@ f(x) = x^${n2} + ${c2}`;
         return;
       }
       saveParentPin(newPin);
+      // Sync new PIN to Firebase so all devices pick it up
+      if (familyCode) {
+        saveFamilyToFirebase(familyCode, null, newPin);
+      }
       const email = pinEmail.trim();
       if (email) {
         saveRecoveryEmail(email);
@@ -1583,12 +1592,13 @@ f(x) = x^${n2} + ${c2}`;
       saveCustomLabels(l);
     };
     const familyCodeRef = React.useRef(familyCode);
-    React.useEffect(() => { familyCodeRef.current = familyCode; }, [familyCode]);
+    useEffect(() => { familyCodeRef.current = familyCode; }, [familyCode]);
     const setProfiles = (p) => {
       setProfilesRaw(p);
       saveProfiles(p);
-      // Sync to Firebase so all family devices stay up to date
-      if (familyCodeRef.current) saveFamilyToFirebase(familyCodeRef.current, p);
+      if (familyCodeRef.current) {
+        saveFamilyToFirebase(familyCodeRef.current, p, undefined);
+      }
     };
     const patchProfile = (id, fn) => {
       const next = profiles.map((p) => p.id === id ? fn(p) : p);
@@ -1621,12 +1631,14 @@ f(x) = x^${n2} + ${c2}`;
       setQuizResult(null);
     };
     const handleFamilyComplete = (fc, remoteProfiles) => {
+      familyCodeRef.current = fc;
       setFamilyCode(fc);
-      if (remoteProfiles) {
-        setProfiles(remoteProfiles);
+      if (remoteProfiles && remoteProfiles.length > 0) {
+        setProfilesRaw(remoteProfiles);
+        saveProfiles(remoteProfiles);
       } else if (profiles.length > 0) {
-        // Existing profiles on this device — push them to Firebase now
-        saveFamilyToFirebase(fc, profiles);
+        // Push any existing local profiles up to the new family on Firebase
+        saveFamilyToFirebase(fc, profiles, loadParentPin());
       }
       setShowFamilySetup(false);
     };
