@@ -7,7 +7,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800;900&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
-  <!-- EmailJS — needed for PIN recovery email. Remove if not using. -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -778,6 +777,21 @@ f(x) = x^${n2} + ${c2}`;
   const EMAILJS_SERVICE_ID = "YOUR_SERVICE_ID";
   const EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID";
   const EMAILJS_PUBLIC_KEY = "YOUR_PUBLIC_KEY";
+  async function sendFamilyCodeEmail(toEmail, familyCode) {
+    try {
+      if (!window.emailjs) return false;
+      await window.emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        { to_email: toEmail, family_code: familyCode, pin_code: loadParentPin(), app_name: "Math Adventure" },
+        { publicKey: EMAILJS_PUBLIC_KEY }
+      );
+      return true;
+    } catch (e) {
+      console.error("EmailJS error:", e);
+      return false;
+    }
+  }
   async function sendPinEmail(toEmail, pin) {
     try {
       if (!window.emailjs) {
@@ -1130,9 +1144,14 @@ f(x) = x^${n2} + ${c2}`;
     const [code, setCode] = useState("");
     const [loading, setLoading] = useState(false);
     const [err, setErr] = useState("");
-    const createFamily = () => {
+    const [email, setEmail] = useState(() => loadRecoveryEmail());
+    const createFamily = async () => {
       const fc = genFamilyCode();
       saveFamilyCode(fc);
+      if (email.trim()) {
+        saveRecoveryEmail(email.trim());
+        await sendFamilyCodeEmail(email.trim(), fc);
+      }
       onComplete(fc);
     };
     const joinFamily = async () => {
@@ -1163,7 +1182,16 @@ f(x) = x^${n2} + ${c2}`;
       alignItems: "center",
       justifyContent: "center",
       padding: 20
-    } }, /* @__PURE__ */ React.createElement("div", { style: { ...S.card, maxWidth: 420, width: "100%", textAlign: "center", animation: "fadeUp 0.4s ease" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "3rem", marginBottom: 8 } }, "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F467}"), /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: "'Baloo 2',cursive", fontSize: "1.8rem", fontWeight: 900, color: "var(--navy)", marginBottom: 4 } }, "Welcome to Math Adventure!"), /* @__PURE__ */ React.createElement("p", { style: { color: "var(--muted)", fontWeight: 600, fontSize: "0.9rem", lineHeight: 1.6, marginBottom: 24 } }, "Create a Family Code to get started, or join an existing family to share profiles across devices."), mode === "choice" ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("button", { style: { ...S.btnPrimary, width: "100%", marginBottom: 12 }, onClick: createFamily }, "\u{1F3E0} Create a New Family"), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnSecondary, width: "100%" }, onClick: () => setMode("join") }, "\u{1F517} Join with Family Code")) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", { style: { ...S.inputLabel, textAlign: "left" } }, "Family Code"), /* @__PURE__ */ React.createElement(
+    } }, /* @__PURE__ */ React.createElement("div", { style: { ...S.card, maxWidth: 420, width: "100%", textAlign: "center", animation: "fadeUp 0.4s ease" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "3rem", marginBottom: 8 } }, "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F467}"), /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: "'Baloo 2',cursive", fontSize: "1.8rem", fontWeight: 900, color: "var(--navy)", marginBottom: 4 } }, "Welcome to Math Adventure!"), /* @__PURE__ */ React.createElement("p", { style: { color: "var(--muted)", fontWeight: 600, fontSize: "0.9rem", lineHeight: 1.6, marginBottom: 24 } }, "Create a Family Code to get started, or join an existing family to share profiles across devices."), mode === "choice" ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", { style: { ...S.inputLabel, textAlign: "left" } }, "Your email (optional)"), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        type: "email",
+        style: { ...S.input, marginBottom: 8 },
+        placeholder: "e.g. parent@email.com",
+        value: email,
+        onChange: (e) => setEmail(e.target.value)
+      }
+    ), /* @__PURE__ */ React.createElement("p", { style: { fontSize: "0.73rem", color: "var(--muted)", fontWeight: 600, marginBottom: 16, lineHeight: 1.5, textAlign: "left" } }, "We'll email your Family Code to this address so you can always recover it."), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnPrimary, width: "100%", marginBottom: 12 }, onClick: createFamily }, "\u{1F3E0} Create a New Family"), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnSecondary, width: "100%" }, onClick: () => setMode("join") }, "\u{1F517} Join with Family Code")) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", { style: { ...S.inputLabel, textAlign: "left" } }, "Family Code"), /* @__PURE__ */ React.createElement(
       "input",
       {
         style: { ...S.input, textAlign: "center", fontSize: "1.2rem", letterSpacing: 3, textTransform: "uppercase" },
@@ -1722,6 +1750,130 @@ f(x) = x^${n2} + ${c2}`;
       }
     ));
   }
+  function FamilyBar({ familyCode, onParentMode, onAdminMode }) {
+    const [copied, setCopied] = useState(false);
+    const [showShare, setShowShare] = useState(false);
+    const [shareEmail, setShareEmail] = useState("");
+    const [shareSending, setShareSending] = useState(false);
+    const [shareSent, setShareSent] = useState(false);
+    const shareText = `Join our family on Math Adventure!
+
+Family Code: ${familyCode}
+
+Go to https://math.jacobsiler.com, tap "Join with Family Code" and enter the code above.`;
+    const handleCopy = () => {
+      navigator.clipboard?.writeText(familyCode).catch(() => {
+      });
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2e3);
+    };
+    const handleNativeShare = () => {
+      if (navigator.share) {
+        navigator.share({ title: "Math Adventure \u2013 Family Code", text: shareText }).catch(() => {
+        });
+      } else {
+        navigator.clipboard?.writeText(shareText).catch(() => {
+        });
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2e3);
+      }
+    };
+    const handleEmailInvite = async () => {
+      if (!shareEmail.trim()) return;
+      setShareSending(true);
+      const ok = await sendFamilyCodeEmail(shareEmail.trim(), familyCode);
+      setShareSending(false);
+      if (ok) {
+        setShareSent(true);
+        setTimeout(() => {
+          setShareSent(false);
+          setShowShare(false);
+          setShareEmail("");
+        }, 2500);
+      } else alert("Email failed \u2014 check your EmailJS config.");
+    };
+    return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 10,
+      flexWrap: "wrap",
+      gap: 8
+    } }, /* @__PURE__ */ React.createElement("button", { onClick: handleCopy, title: "Tap to copy code", style: {
+      fontSize: "0.72rem",
+      color: copied ? "#0d6e4f" : "var(--muted)",
+      fontWeight: 700,
+      background: copied ? "#d4f7ec" : "#f0f0f0",
+      borderRadius: 20,
+      padding: "5px 14px",
+      letterSpacing: 1,
+      border: "none",
+      cursor: "pointer",
+      transition: "all 0.2s",
+      display: "flex",
+      alignItems: "center",
+      gap: 6
+    } }, "\u{1F3E0} ", familyCode, /* @__PURE__ */ React.createElement("span", { style: { fontSize: "0.65rem", opacity: 0.7 } }, copied ? "\u2713 Copied!" : "tap to copy")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        style: {
+          ...S.backBtn,
+          fontSize: "0.75rem",
+          padding: "5px 12px",
+          background: "#eaf4ff",
+          borderColor: "#c5deff",
+          color: "var(--blue)",
+          fontWeight: 800
+        },
+        onClick: () => setShowShare((s) => !s)
+      },
+      "\u{1F4E8} Invite"
+    ), /* @__PURE__ */ React.createElement("button", { style: { ...S.backBtn, fontSize: "0.75rem", padding: "5px 12px" }, onClick: onParentMode }, "\u{1F468}\u200D\u{1F469}\u200D\u{1F467} Parent"), /* @__PURE__ */ React.createElement("button", { style: { ...S.backBtn, fontSize: "0.75rem", padding: "5px 12px", opacity: 0.4 }, onClick: onAdminMode }, "\u{1F6E1}\uFE0F"))), showShare && /* @__PURE__ */ React.createElement("div", { style: {
+      ...S.card,
+      padding: "16px 18px",
+      marginBottom: 14,
+      animation: "fadeUp 0.25s ease",
+      background: "linear-gradient(135deg,#eaf4ff,#f0f8ff)",
+      borderColor: "#c5deff"
+    } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "'Baloo 2',cursive", fontWeight: 800, color: "var(--navy)", marginBottom: 4, fontSize: "1rem" } }, "\u{1F4E8} Invite someone to join your family"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: "0.78rem", color: "var(--muted)", fontWeight: 600, marginBottom: 12, lineHeight: 1.5 } }, "Share your Family Code ", /* @__PURE__ */ React.createElement("strong", { style: { color: "var(--navy)", letterSpacing: 1 } }, familyCode), " so they can sync profiles across devices."), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        style: {
+          ...S.btnPrimary,
+          width: "100%",
+          marginBottom: 10,
+          background: "var(--mint)",
+          boxShadow: "0 4px 14px rgba(6,214,160,0.3)"
+        },
+        onClick: handleNativeShare
+      },
+      navigator.share ? "\u{1F4E4} Share via\u2026" : "\u{1F4CB} Copy Invite Message"
+    ), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center" } }, /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        type: "email",
+        style: { ...S.input, marginBottom: 0, flex: 1 },
+        placeholder: "Send invite to email\u2026",
+        value: shareEmail,
+        onChange: (e) => setShareEmail(e.target.value),
+        onKeyDown: (e) => e.key === "Enter" && handleEmailInvite()
+      }
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        style: {
+          ...S.btnPrimary,
+          flexShrink: 0,
+          padding: "10px 16px",
+          fontSize: "0.88rem",
+          opacity: shareEmail.trim() && !shareSending ? 1 : 0.45
+        },
+        disabled: !shareEmail.trim() || shareSending,
+        onClick: handleEmailInvite
+      },
+      shareSending ? "\u2026" : shareSent ? "\u2713" : "Send"
+    )), shareSent && /* @__PURE__ */ React.createElement("div", { style: { color: "#0d6e4f", fontWeight: 700, fontSize: "0.8rem", marginTop: 8, textAlign: "center" } }, "\u{1F4E7} Invite sent!")));
+  }
   function HomeScreen({ profiles, country, labels, familyCode, onSetCountry, onSelectProfile, onCreateProfile, onParentMode, onAdminMode }) {
     const cl = COUNTRY_LABELS[country];
     return /* @__PURE__ */ React.createElement(Page, null, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "36px 0 16px", animation: "fadeUp 0.5s ease" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "3rem", marginBottom: 6 } }, "\u{1F31F}"), /* @__PURE__ */ React.createElement("h1", { style: {
@@ -1731,22 +1883,7 @@ f(x) = x^${n2} + ${c2}`;
       color: "var(--navy)",
       letterSpacing: "-1px",
       textShadow: "2px 3px 0 rgba(26,58,107,0.1)"
-    } }, "Math Adventure"), /* @__PURE__ */ React.createElement("p", { style: { color: "var(--muted)", fontWeight: 700, fontSize: "0.95rem", marginTop: 4 } }, "A joyful homeschool ", country === "US" ? "math" : "maths", " companion")), /* @__PURE__ */ React.createElement("div", { style: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 10,
-      flexWrap: "wrap",
-      gap: 8
-    } }, /* @__PURE__ */ React.createElement("div", { style: {
-      fontSize: "0.72rem",
-      color: "var(--muted)",
-      fontWeight: 700,
-      background: "#f0f0f0",
-      borderRadius: 20,
-      padding: "4px 12px",
-      letterSpacing: 1
-    } }, "\u{1F3E0} ", familyCode), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ React.createElement("button", { style: { ...S.backBtn, fontSize: "0.75rem", padding: "5px 12px" }, onClick: onParentMode }, "\u{1F468}\u200D\u{1F469}\u200D\u{1F467} Parent Mode"), /* @__PURE__ */ React.createElement("button", { style: { ...S.backBtn, fontSize: "0.75rem", padding: "5px 12px", opacity: 0.5 }, onClick: onAdminMode }, "\u{1F6E1}\uFE0F"))), /* @__PURE__ */ React.createElement("div", { style: { ...S.card, padding: "14px 18px", marginBottom: 14, animation: "fadeUp 0.4s 0.05s ease both" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.78rem", fontWeight: 800, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 } }, "\u{1F30D} Curriculum"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, Object.entries(COUNTRY_LABELS).map(([code, cl2]) => /* @__PURE__ */ React.createElement("button", { key: code, onClick: () => onSetCountry(code), style: {
+    } }, "Math Adventure"), /* @__PURE__ */ React.createElement("p", { style: { color: "var(--muted)", fontWeight: 700, fontSize: "0.95rem", marginTop: 4 } }, "A joyful homeschool ", country === "US" ? "math" : "maths", " companion")), /* @__PURE__ */ React.createElement(FamilyBar, { familyCode, onParentMode, onAdminMode }), /* @__PURE__ */ React.createElement("div", { style: { ...S.card, padding: "14px 18px", marginBottom: 14, animation: "fadeUp 0.4s 0.05s ease both" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.78rem", fontWeight: 800, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 } }, "\u{1F30D} Curriculum"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, Object.entries(COUNTRY_LABELS).map(([code, cl2]) => /* @__PURE__ */ React.createElement("button", { key: code, onClick: () => onSetCountry(code), style: {
       border: `2px solid ${country === code ? "var(--blue)" : "#e0e0e0"}`,
       background: country === code ? "#eaf0ff" : "#fafafa",
       borderRadius: 20,
