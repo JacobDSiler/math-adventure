@@ -920,18 +920,25 @@ f(x) = x^${n2} + ${c2}`;
     clearTimeout(_fbSaveTimer);
     _fbSaveTimer = setTimeout(async () => {
       const fb = await getDb();
-      if (!fb) return;
+      if (!fb) { console.warn("Firebase not available for save"); return; }
       try {
         const { db, doc, setDoc } = fb;
         const payload = { ts: Date.now() };
-        if (profiles !== null) payload.profiles = profiles;
-        if (parentPin !== undefined) payload.parentPin = parentPin;
+        if (profiles !== null && profiles !== undefined) payload.profiles = profiles;
+        if (parentPin !== undefined && parentPin !== null) payload.parentPin = parentPin;
         await setDoc(doc(db, "families", familyCode), payload, { merge: true });
-        console.log("Saved to Firebase:", familyCode);
+        console.log("✅ Firebase saved:", familyCode, profiles ? `(${profiles.length} profiles)` : "(PIN only)");
       } catch (e) {
-        console.warn("saveFamilyToFirebase:", e);
+        console.warn("saveFamilyToFirebase error:", e);
       }
-    }, 1500);
+    }, 1200);
+  }
+  // Merge two profile arrays by id — keeps all unique profiles, remote wins on conflict
+  function mergeProfileLists(local, remote) {
+    const map = {};
+    (local || []).forEach(p => { map[p.id] = p; });
+    (remote || []).forEach(p => { map[p.id] = p; }); // remote overwrites local on same id
+    return Object.values(map);
   }
   const ADMIN_PIN_HASH = "9999";
   function Page({ children }) {
@@ -1181,60 +1188,134 @@ f(x) = x^${n2} + ${c2}`;
         saveRecoveryEmail(email.trim());
         await sendFamilyCodeEmail(email.trim(), fc);
       }
-      onComplete(fc);
+      onComplete(fc, null, "create");
     };
     const joinFamily = async () => {
       const trimmed = code.trim().toUpperCase();
-      if (trimmed.length < 5) {
-        setErr("Please enter a valid family code.");
-        return;
-      }
-      setLoading(true);
-      setErr("");
+      if (trimmed.length < 5) { setErr("Please enter a valid family code."); return; }
+      setLoading(true); setErr("");
       const remote = await loadFamilyFromFirebase(trimmed);
       setLoading(false);
       saveFamilyCode(trimmed);
       if (remote) {
-        if (remote.profiles && remote.profiles.length > 0) {
-          saveProfiles(remote.profiles);
-        }
-        if (remote.parentPin) {
-          saveParentPin(remote.parentPin);
-        }
-        onComplete(trimmed, remote.profiles && remote.profiles.length > 0 ? remote.profiles : null);
+        if (remote.parentPin) saveParentPin(remote.parentPin);
+        onComplete(trimmed, remote.profiles && remote.profiles.length > 0 ? remote.profiles : null, "join");
       } else {
-        onComplete(trimmed, null);
+        onComplete(trimmed, null, "join");
       }
     };
     return /* @__PURE__ */ React.createElement("div", { style: {
-      position: "fixed",
-      inset: 0,
+      position: "fixed", inset: 0,
       background: "linear-gradient(160deg,#fdf6ee,#f0f8ff)",
-      zIndex: 980,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: 20
-    } }, /* @__PURE__ */ React.createElement("div", { style: { ...S.card, maxWidth: 420, width: "100%", textAlign: "center", animation: "fadeUp 0.4s ease" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "3rem", marginBottom: 8 } }, "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F467}"), /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: "'Baloo 2',cursive", fontSize: "1.8rem", fontWeight: 900, color: "var(--navy)", marginBottom: 4 } }, "Welcome to Math Adventure!"), /* @__PURE__ */ React.createElement("p", { style: { color: "var(--muted)", fontWeight: 600, fontSize: "0.9rem", lineHeight: 1.6, marginBottom: 24 } }, "Create a Family Code to get started, or join an existing family to share profiles across devices."), mode === "choice" ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", { style: { ...S.inputLabel, textAlign: "left" } }, "Your email (optional)"), /* @__PURE__ */ React.createElement(
-      "input",
-      {
-        type: "email",
-        style: { ...S.input, marginBottom: 8 },
-        placeholder: "e.g. parent@email.com",
-        value: email,
-        onChange: (e) => setEmail(e.target.value)
+      zIndex: 980, display: "flex", alignItems: "center", justifyContent: "center", padding: 20
+    } }, /* @__PURE__ */ React.createElement("div", { style: { ...S.card, maxWidth: 420, width: "100%", textAlign: "center", animation: "fadeUp 0.4s ease" } },
+      /* @__PURE__ */ React.createElement("div", { style: { fontSize: "3rem", marginBottom: 8 } }, "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F467}"),
+      /* @__PURE__ */ React.createElement("h1", { style: { fontFamily: "'Baloo 2',cursive", fontSize: "1.8rem", fontWeight: 900, color: "var(--navy)", marginBottom: 4 } }, "Welcome to Math Adventure!"),
+      /* @__PURE__ */ React.createElement("p", { style: { color: "var(--muted)", fontWeight: 600, fontSize: "0.9rem", lineHeight: 1.6, marginBottom: 24 } }, "Create a Family Code to get started, or join an existing family to share profiles across devices."),
+      mode === "choice" ? /* @__PURE__ */ React.createElement(React.Fragment, null,
+        /* @__PURE__ */ React.createElement("label", { style: { ...S.inputLabel, textAlign: "left" } }, "Your email (optional)"),
+        /* @__PURE__ */ React.createElement("input", { type: "email", style: { ...S.input, marginBottom: 8 }, placeholder: "e.g. parent@email.com", value: email, onChange: (e) => setEmail(e.target.value) }),
+        /* @__PURE__ */ React.createElement("p", { style: { fontSize: "0.73rem", color: "var(--muted)", fontWeight: 600, marginBottom: 16, lineHeight: 1.5, textAlign: "left" } }, "We'll email your Family Code to this address so you can always recover it."),
+        /* @__PURE__ */ React.createElement("button", { style: { ...S.btnPrimary, width: "100%", marginBottom: 12 }, onClick: createFamily }, "\u{1F3E0} Create a New Family"),
+        /* @__PURE__ */ React.createElement("button", { style: { ...S.btnSecondary, width: "100%" }, onClick: () => setMode("join") }, "\u{1F517} Join with Family Code")
+      ) : /* @__PURE__ */ React.createElement(React.Fragment, null,
+        /* @__PURE__ */ React.createElement("label", { style: { ...S.inputLabel, textAlign: "left" } }, "Family Code"),
+        /* @__PURE__ */ React.createElement("input", {
+          style: { ...S.input, textAlign: "center", fontSize: "1.2rem", letterSpacing: 3, textTransform: "uppercase" },
+          placeholder: "e.g. MA-WXYZ", value: code,
+          onChange: (e) => setCode(e.target.value.toUpperCase()),
+          onKeyDown: (e) => e.key === "Enter" && joinFamily(), maxLength: 10
+        }),
+        err && /* @__PURE__ */ React.createElement("div", { style: { color: "var(--coral)", fontWeight: 700, fontSize: "0.82rem", marginBottom: 8 } }, err),
+        /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 8 } },
+          /* @__PURE__ */ React.createElement("button", { style: { ...S.btnSecondary, flex: 1 }, onClick: () => setMode("choice") }, "\u2190 Back"),
+          /* @__PURE__ */ React.createElement("button", { style: { ...S.btnPrimary, flex: 2, opacity: loading ? 0.5 : 1 }, disabled: loading, onClick: joinFamily }, loading ? "Joining\u2026" : "Join Family \u2192")
+        )
+      )
+    ));
+  }
+  // Modal for adding/merging an extra family code into current profiles
+  function MergeFamilyModal({ currentProfiles, onMerge, onClose }) {
+    const [code, setCode] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [preview, setPreview] = useState(null);
+    const [err, setErr] = useState("");
+    const lookup = async () => {
+      const trimmed = code.trim().toUpperCase();
+      if (trimmed.length < 5) { setErr("Enter a valid family code."); return; }
+      setLoading(true); setErr(""); setPreview(null);
+      const remote = await loadFamilyFromFirebase(trimmed);
+      setLoading(false);
+      if (!remote || !remote.profiles || remote.profiles.length === 0) {
+        setErr("No profiles found for that code. Double-check it and try again.");
+        return;
       }
-    ), /* @__PURE__ */ React.createElement("p", { style: { fontSize: "0.73rem", color: "var(--muted)", fontWeight: 600, marginBottom: 16, lineHeight: 1.5, textAlign: "left" } }, "We'll email your Family Code to this address so you can always recover it."), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnPrimary, width: "100%", marginBottom: 12 }, onClick: createFamily }, "\u{1F3E0} Create a New Family"), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnSecondary, width: "100%" }, onClick: () => setMode("join") }, "\u{1F517} Join with Family Code")) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("label", { style: { ...S.inputLabel, textAlign: "left" } }, "Family Code"), /* @__PURE__ */ React.createElement(
-      "input",
-      {
-        style: { ...S.input, textAlign: "center", fontSize: "1.2rem", letterSpacing: 3, textTransform: "uppercase" },
-        placeholder: "e.g. MA-WXYZ",
-        value: code,
-        onChange: (e) => setCode(e.target.value.toUpperCase()),
-        onKeyDown: (e) => e.key === "Enter" && joinFamily(),
-        maxLength: 10
-      }
-    ), err && /* @__PURE__ */ React.createElement("div", { style: { color: "var(--coral)", fontWeight: 700, fontSize: "0.82rem", marginBottom: 8 } }, err), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 8 } }, /* @__PURE__ */ React.createElement("button", { style: { ...S.btnSecondary, flex: 1 }, onClick: () => setMode("choice") }, "\u2190 Back"), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnPrimary, flex: 2, opacity: loading ? 0.5 : 1 }, disabled: loading, onClick: joinFamily }, loading ? "Joining\u2026" : "Join Family \u2192")))));
+      // Show which profiles are new vs already exist
+      const currentIds = new Set(currentProfiles.map(p => p.id));
+      const newOnes = remote.profiles.filter(p => !currentIds.has(p.id));
+      const dupes = remote.profiles.filter(p => currentIds.has(p.id));
+      setPreview({ profiles: remote.profiles, newOnes, dupes, code: trimmed });
+    };
+    const doMerge = () => {
+      if (!preview) return;
+      onMerge(preview.profiles, preview.code);
+    };
+    return /* @__PURE__ */ React.createElement("div", { style: {
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+      zIndex: 970, display: "flex", alignItems: "center", justifyContent: "center", padding: 16
+    } }, /* @__PURE__ */ React.createElement("div", { style: {
+      background: "#fffdf9", borderRadius: 24, padding: 24,
+      maxWidth: 420, width: "100%", boxShadow: "0 8px 40px rgba(0,0,0,0.2)", animation: "fadeUp 0.3s ease"
+    } },
+      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 } },
+        /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "'Baloo 2',cursive", fontSize: "1.2rem", fontWeight: 800, color: "var(--navy)" } }, "\u{1F517} Import from Another Family Code"),
+        /* @__PURE__ */ React.createElement("button", { style: S.backBtn, onClick: onClose }, "\u2715")
+      ),
+      /* @__PURE__ */ React.createElement("p", { style: { color: "var(--muted)", fontWeight: 600, fontSize: "0.85rem", marginBottom: 16, lineHeight: 1.5 } },
+        "Enter another family code to import its learner profiles into your current family. Duplicate profiles (same ID) will be updated from the remote record."
+      ),
+      /* @__PURE__ */ React.createElement("label", { style: S.inputLabel }, "Family Code to Import"),
+      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } },
+        /* @__PURE__ */ React.createElement("input", {
+          style: { ...S.input, marginBottom: 0, flex: 1, textTransform: "uppercase", letterSpacing: 2 },
+          placeholder: "MA-WXYZ", value: code,
+          onChange: e => setCode(e.target.value.toUpperCase()),
+          onKeyDown: e => e.key === "Enter" && lookup(), maxLength: 10
+        }),
+        /* @__PURE__ */ React.createElement("button", {
+          style: { ...S.btnPrimary, flexShrink: 0, padding: "10px 16px", fontSize: "0.88rem", opacity: loading ? 0.5 : 1 },
+          disabled: loading, onClick: lookup
+        }, loading ? "\u2026" : "Look up")
+      ),
+      err && /* @__PURE__ */ React.createElement("div", { style: { color: "var(--coral)", fontWeight: 700, fontSize: "0.82rem", marginTop: 8, marginBottom: 4 } }, err),
+      preview && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 16 } },
+        /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, color: "var(--navy)", marginBottom: 10, fontSize: "0.9rem" } }, "Found ", preview.profiles.length, " profile(s) in ", preview.code, ":"),
+        preview.profiles.map(p => {
+          const isNew = !currentProfiles.find(cp => cp.id === p.id);
+          return /* @__PURE__ */ React.createElement("div", { key: p.id, style: {
+            display: "flex", alignItems: "center", gap: 10, padding: "8px 12px",
+            background: isNew ? "#e8fdf6" : "#f0f0f0", borderRadius: 12, marginBottom: 6,
+            border: `1.5px solid ${isNew ? "#06D6A0" : "#ddd"}`
+          } },
+            /* @__PURE__ */ React.createElement("span", { style: { fontSize: "1.4rem" } }, p.avatar),
+            /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } },
+              /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, fontSize: "0.88rem" } }, p.name),
+              /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.72rem", color: "var(--muted)", fontWeight: 600 } }, "Grade ", p.gradeId)
+            ),
+            /* @__PURE__ */ React.createElement("span", { style: {
+              fontSize: "0.7rem", fontWeight: 800, padding: "2px 8px", borderRadius: 20,
+              background: isNew ? "#06D6A0" : "#ccc", color: isNew ? "#fff" : "#666"
+            } }, isNew ? "NEW" : "UPDATE")
+          );
+        }),
+        /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14 } },
+          /* @__PURE__ */ React.createElement("button", { style: { ...S.btnSecondary, flex: 1 }, onClick: onClose }, "Cancel"),
+          /* @__PURE__ */ React.createElement("button", { style: { ...S.btnPrimary, flex: 2 }, onClick: doMerge },
+            preview.newOnes.length > 0 ? `\u{1F4E5} Import ${preview.newOnes.length} new + update ${preview.dupes.length}` : `\u{1F504} Update ${preview.dupes.length} existing profile(s)`
+          )
+        )
+      )
+    ));
   }
   function AdminPanel({ onClose }) {
     const [feedback, setFeedback] = useState(null);
@@ -1309,10 +1390,7 @@ f(x) = x^${n2} + ${c2}`;
         return;
       }
       saveParentPin(newPin);
-      // Sync new PIN to Firebase so all devices pick it up
-      if (familyCode) {
-        saveFamilyToFirebase(familyCode, null, newPin);
-      }
+      if (familyCode) saveFamilyToFirebase(familyCode, null, newPin);
       const email = pinEmail.trim();
       if (email) {
         saveRecoveryEmail(email);
@@ -1583,22 +1661,15 @@ f(x) = x^${n2} + ${c2}`;
     const [showAdminPin, setShowAdminPin] = useState(false);
     const [showParent, setShowParent] = useState(false);
     const [showAdmin, setShowAdmin] = useState(false);
-    const setCountry = (c) => {
-      setCountryRaw(c);
-      saveCountry(c);
-    };
-    const setLabels = (l) => {
-      setLabelsRaw(l);
-      saveCustomLabels(l);
-    };
+    const [showMerge, setShowMerge] = useState(false);
     const familyCodeRef = React.useRef(familyCode);
     useEffect(() => { familyCodeRef.current = familyCode; }, [familyCode]);
+    const setCountry = (c) => { setCountryRaw(c); saveCountry(c); };
+    const setLabels = (l) => { setLabelsRaw(l); saveCustomLabels(l); };
     const setProfiles = (p) => {
       setProfilesRaw(p);
       saveProfiles(p);
-      if (familyCodeRef.current) {
-        saveFamilyToFirebase(familyCodeRef.current, p, undefined);
-      }
+      if (familyCodeRef.current) saveFamilyToFirebase(familyCodeRef.current, p, undefined);
     };
     const patchProfile = (id, fn) => {
       const next = profiles.map((p) => p.id === id ? fn(p) : p);
@@ -1630,176 +1701,47 @@ f(x) = x^${n2} + ${c2}`;
       setGameConfig(null);
       setQuizResult(null);
     };
-    const handleFamilyComplete = (fc, remoteProfiles) => {
+    const handleFamilyComplete = (fc, remoteProfiles, mode) => {
       familyCodeRef.current = fc;
       setFamilyCode(fc);
+      saveFamilyCode(fc);
       if (remoteProfiles && remoteProfiles.length > 0) {
-        setProfilesRaw(remoteProfiles);
-        saveProfiles(remoteProfiles);
+        const merged = mergeProfileLists(profiles, remoteProfiles);
+        setProfilesRaw(merged);
+        saveProfiles(merged);
+        saveFamilyToFirebase(fc, merged, loadParentPin());
       } else if (profiles.length > 0) {
-        // Push any existing local profiles up to the new family on Firebase
         saveFamilyToFirebase(fc, profiles, loadParentPin());
       }
       setShowFamilySetup(false);
     };
-    return /* @__PURE__ */ React.createElement(React.Fragment, null, showConfetti && /* @__PURE__ */ React.createElement(Confetti, null), showFamilySetup && /* @__PURE__ */ React.createElement(FamilySetup, { onComplete: handleFamilyComplete }), showParentPin && /* @__PURE__ */ React.createElement(
-      PinModal,
-      {
-        title: "Parent & Teacher Mode",
-        subtitle: "Enter your parent PIN to continue",
-        correctPin: loadParentPin(),
-        onSuccess: () => {
-          setShowParentPin(false);
-          setShowParent(true);
-        },
-        onCancel: () => setShowParentPin(false)
-      }
-    ), showAdminPin && /* @__PURE__ */ React.createElement(
-      PinModal,
-      {
-        title: "Admin Mode",
-        subtitle: "Enter the admin PIN",
-        correctPin: ADMIN_PIN_HASH,
-        onSuccess: () => {
-          setShowAdminPin(false);
-          setShowAdmin(true);
-        },
-        onCancel: () => setShowAdminPin(false)
-      }
-    ), showParent && /* @__PURE__ */ React.createElement(
-      ParentPanel,
-      {
-        profiles,
-        country,
-        familyCode,
-        labels,
-        onUpdateLabels: (l) => {
-          setLabels(l);
-        },
-        onClose: () => setShowParent(false)
-      }
-    ), showAdmin && /* @__PURE__ */ React.createElement(AdminPanel, { onClose: () => setShowAdmin(false) }), !showFamilySetup && familyCode && /* @__PURE__ */ React.createElement(FeedbackWidget, { familyCode, profiles }), screen === "home" && /* @__PURE__ */ React.createElement(
-      HomeScreen,
-      {
-        profiles,
-        country,
-        labels,
-        familyCode,
-        onSetCountry: setCountry,
-        onSelectProfile: (p) => {
-          setActiveProfile(p);
-          setScreen("dashboard");
-        },
-        onCreateProfile: () => setScreen("createProfile"),
-        onParentMode: () => setShowParentPin(true),
-        onAdminMode: () => setShowAdminPin(true)
-      }
-    ), screen === "createProfile" && /* @__PURE__ */ React.createElement(
-      CreateProfile,
-      {
-        country,
-        onSave: (profile) => {
-          const updated = [...profiles, profile];
-          setProfiles(updated);
-          setActiveProfile(profile);
-          setScreen("dashboard");
-        },
-        onBack: () => setScreen("home")
-      }
-    ), screen === "dashboard" && activeProfile && /* @__PURE__ */ React.createElement(
-      Dashboard,
-      {
-        profile: activeProfile,
-        country,
-        labels,
-        onFlash: () => setScreen("flashSetup"),
-        onQuiz: () => setScreen("quizSetup"),
-        onProgress: () => setScreen("profileView"),
-        onEdit: () => setScreen("editProfile"),
-        onHome: goHome
-      }
-    ), screen === "flashSetup" && activeProfile && /* @__PURE__ */ React.createElement(
-      FlashSetup,
-      {
-        profile: activeProfile,
-        country,
-        onStart: (cfg) => {
-          setGameConfig(cfg);
-          setScreen("flashGame");
-        },
-        onBack: goDash
-      }
-    ), screen === "quizSetup" && activeProfile && /* @__PURE__ */ React.createElement(
-      QuizSetup,
-      {
-        profile: activeProfile,
-        country,
-        onStart: (cfg) => {
-          setGameConfig(cfg);
-          setScreen("quizGame");
-        },
-        onBack: goDash
-      }
-    ), screen === "flashGame" && gameConfig && /* @__PURE__ */ React.createElement(FlashGame, { config: gameConfig, onExit: goDash }), screen === "quizGame" && gameConfig && /* @__PURE__ */ React.createElement(
-      QuizGame,
-      {
-        config: gameConfig,
-        onComplete: (result) => {
-          const topicMap = {};
-          result.answers.forEach(({ topic, correct }) => {
-            if (!topicMap[topic]) topicMap[topic] = { correct: 0, wrong: 0 };
-            correct ? topicMap[topic].correct++ : topicMap[topic].wrong++;
-          });
-          Object.entries(topicMap).forEach(([t, v]) => recordAnswers(activeProfile.id, t, v.correct, v.wrong));
-          recordQuizResult(activeProfile.id, gameConfig.topics, result.score, result.total);
-          setQuizResult(result);
-          if (result.pct >= 80) {
-            setShowConfetti(true);
-            setTimeout(() => setShowConfetti(false), 3500);
-          }
-          setScreen("quizResult");
-        },
-        onExit: goDash
-      }
-    ), screen === "quizResult" && quizResult && /* @__PURE__ */ React.createElement(
-      QuizResult,
-      {
-        result: quizResult,
-        onRetry: () => {
-          setQuizResult(null);
-          setGameConfig(null);
-          setScreen("quizSetup");
-        },
-        onHome: goDash
-      }
-    ), screen === "profileView" && activeProfile && /* @__PURE__ */ React.createElement(
-      ProfileView,
-      {
-        profile: activeProfile,
-        country,
-        labels,
-        onBack: goDash,
-        onDelete: () => {
-          if (window.confirm(`Delete ${activeProfile.name}'s profile? This can't be undone.`)) {
-            setProfiles(profiles.filter((p) => p.id !== activeProfile.id));
-            goHome();
-          }
-        }
-      }
-    ), screen === "editProfile" && activeProfile && /* @__PURE__ */ React.createElement(
-      EditProfile,
-      {
-        profile: activeProfile,
-        country,
-        onSave: (updated) => {
-          patchProfile(activeProfile.id, () => updated);
-          setScreen("dashboard");
-        },
-        onBack: goDash
-      }
-    ));
+    const handleMerge = (remoteProfiles, remoteCode) => {
+      const merged = mergeProfileLists(profiles, remoteProfiles);
+      setProfiles(merged);
+      setShowMerge(false);
+    };
+    return /* @__PURE__ */ React.createElement(React.Fragment, null,
+      showConfetti && /* @__PURE__ */ React.createElement(Confetti, null),
+      showFamilySetup && /* @__PURE__ */ React.createElement(FamilySetup, { onComplete: handleFamilyComplete }),
+      showMerge && /* @__PURE__ */ React.createElement(MergeFamilyModal, { currentProfiles: profiles, onMerge: handleMerge, onClose: () => setShowMerge(false) }),
+      showParentPin && /* @__PURE__ */ React.createElement(PinModal, { title: "Parent & Teacher Mode", subtitle: "Enter your parent PIN to continue", correctPin: loadParentPin(), onSuccess: () => { setShowParentPin(false); setShowParent(true); }, onCancel: () => setShowParentPin(false) }),
+      showAdminPin && /* @__PURE__ */ React.createElement(PinModal, { title: "Admin Mode", subtitle: "Enter the admin PIN", correctPin: ADMIN_PIN_HASH, onSuccess: () => { setShowAdminPin(false); setShowAdmin(true); }, onCancel: () => setShowAdminPin(false) }),
+      showParent && /* @__PURE__ */ React.createElement(ParentPanel, { profiles, country, familyCode, labels, onUpdateLabels: (l) => setLabels(l), onClose: () => setShowParent(false) }),
+      showAdmin && /* @__PURE__ */ React.createElement(AdminPanel, { onClose: () => setShowAdmin(false) }),
+      !showFamilySetup && familyCode && /* @__PURE__ */ React.createElement(FeedbackWidget, { familyCode, profiles }),
+      screen === "home" && /* @__PURE__ */ React.createElement(HomeScreen, { profiles, country, labels, familyCode, onSetCountry: setCountry, onSelectProfile: (p) => { setActiveProfile(p); setScreen("dashboard"); }, onCreateProfile: () => setScreen("createProfile"), onParentMode: () => setShowParentPin(true), onAdminMode: () => setShowAdminPin(true), onMergeFamily: () => setShowMerge(true) }),
+      screen === "createProfile" && /* @__PURE__ */ React.createElement(CreateProfile, { country, onSave: (profile) => { const updated = [...profiles, profile]; setProfiles(updated); setActiveProfile(profile); setScreen("dashboard"); }, onBack: () => setScreen("home") }),
+      screen === "dashboard" && activeProfile && /* @__PURE__ */ React.createElement(Dashboard, { profile: activeProfile, country, labels, onFlash: () => setScreen("flashSetup"), onQuiz: () => setScreen("quizSetup"), onProgress: () => setScreen("profileView"), onEdit: () => setScreen("editProfile"), onHome: goHome }),
+      screen === "flashSetup" && activeProfile && /* @__PURE__ */ React.createElement(FlashSetup, { profile: activeProfile, country, onStart: (cfg) => { setGameConfig(cfg); setScreen("flashGame"); }, onBack: goDash }),
+      screen === "quizSetup" && activeProfile && /* @__PURE__ */ React.createElement(QuizSetup, { profile: activeProfile, country, onStart: (cfg) => { setGameConfig(cfg); setScreen("quizGame"); }, onBack: goDash }),
+      screen === "flashGame" && gameConfig && /* @__PURE__ */ React.createElement(FlashGame, { config: gameConfig, profile: activeProfile, onExit: goDash }),
+      screen === "quizGame" && gameConfig && /* @__PURE__ */ React.createElement(QuizGame, { config: gameConfig, profile: activeProfile, onComplete: (result) => { const topicMap = {}; result.answers.forEach(({ topic, correct }) => { if (!topicMap[topic]) topicMap[topic] = { correct: 0, wrong: 0 }; correct ? topicMap[topic].correct++ : topicMap[topic].wrong++; }); Object.entries(topicMap).forEach(([t, v]) => recordAnswers(activeProfile.id, t, v.correct, v.wrong)); recordQuizResult(activeProfile.id, gameConfig.topics, result.score, result.total); setQuizResult(result); if (result.pct >= 80) { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 3500); } setScreen("quizResult"); }, onExit: goDash }),
+      screen === "quizResult" && quizResult && /* @__PURE__ */ React.createElement(QuizResult, { result: quizResult, onRetry: () => { setQuizResult(null); setGameConfig(null); setScreen("quizSetup"); }, onHome: goDash }),
+      screen === "profileView" && activeProfile && /* @__PURE__ */ React.createElement(ProfileView, { profile: activeProfile, country, labels, onBack: goDash, onDelete: () => { if (window.confirm(`Delete ${activeProfile.name}'s profile? This can't be undone.`)) { setProfiles(profiles.filter((p) => p.id !== activeProfile.id)); goHome(); } } }),
+      screen === "editProfile" && activeProfile && /* @__PURE__ */ React.createElement(EditProfile, { profile: activeProfile, country, onSave: (updated) => { patchProfile(activeProfile.id, () => updated); setScreen("dashboard"); }, onBack: goDash })
+    );
   }
-  function FamilyBar({ familyCode, onParentMode, onAdminMode }) {
+  function FamilyBar({ familyCode, onParentMode, onAdminMode, onMergeFamily }) {
     const [copied, setCopied] = useState(false);
     const [showShare, setShowShare] = useState(false);
     const [shareEmail, setShareEmail] = useState("");
@@ -1879,7 +1821,7 @@ Go to https://math.jacobsiler.com, tap "Join with Family Code" and enter the cod
         onClick: () => setShowShare((s) => !s)
       },
       "\u{1F4E8} Invite"
-    ), /* @__PURE__ */ React.createElement("button", { style: { ...S.backBtn, fontSize: "0.75rem", padding: "5px 12px" }, onClick: onParentMode }, "\u{1F468}\u200D\u{1F469}\u200D\u{1F467} Parent"), /* @__PURE__ */ React.createElement("button", { style: { ...S.backBtn, fontSize: "0.75rem", padding: "5px 12px", opacity: 0.4 }, onClick: onAdminMode }, "\u{1F6E1}\uFE0F"))), showShare && /* @__PURE__ */ React.createElement("div", { style: {
+    ), /* @__PURE__ */ React.createElement("button", { style: { ...S.backBtn, fontSize: "0.75rem", padding: "5px 12px", background: "#f0fff4", borderColor: "#b7f0d4", color: "#0d6e4f", fontWeight: 800 }, onClick: onMergeFamily }, "\u{1F517} Import"), /* @__PURE__ */ React.createElement("button", { style: { ...S.backBtn, fontSize: "0.75rem", padding: "5px 12px" }, onClick: onParentMode }, "\u{1F468}\u200D\u{1F469}\u200D\u{1F467} Parent"), /* @__PURE__ */ React.createElement("button", { style: { ...S.backBtn, fontSize: "0.75rem", padding: "5px 12px", opacity: 0.4 }, onClick: onAdminMode }, "\u{1F6E1}\uFE0F"))), showShare && /* @__PURE__ */ React.createElement("div", { style: {
       ...S.card,
       padding: "16px 18px",
       marginBottom: 14,
@@ -1925,7 +1867,7 @@ Go to https://math.jacobsiler.com, tap "Join with Family Code" and enter the cod
       shareSending ? "\u2026" : shareSent ? "\u2713 Sent!" : "Send"
     )), shareSent && /* @__PURE__ */ React.createElement("div", { style: { color: "#0d6e4f", fontWeight: 700, fontSize: "0.8rem", marginTop: 8, textAlign: "center" } }, "\u{1F4E7} Invite sent!"), shareErr && /* @__PURE__ */ React.createElement("div", { style: { color: "#FF6B6B", fontWeight: 700, fontSize: "0.8rem", marginTop: 8, textAlign: "center" } }, "\u274C ", typeof shareErr === "string" ? shareErr : "Email failed \u2014 see browser console (F12) for details")));
   }
-  function HomeScreen({ profiles, country, labels, familyCode, onSetCountry, onSelectProfile, onCreateProfile, onParentMode, onAdminMode }) {
+  function HomeScreen({ profiles, country, labels, familyCode, onSetCountry, onSelectProfile, onCreateProfile, onParentMode, onAdminMode, onMergeFamily }) {
     const cl = COUNTRY_LABELS[country];
     return /* @__PURE__ */ React.createElement(Page, null, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "36px 0 16px", animation: "fadeUp 0.5s ease" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "3rem", marginBottom: 6 } }, "\u{1F31F}"), /* @__PURE__ */ React.createElement("h1", { style: {
       fontFamily: "'Baloo 2',cursive",
@@ -1934,7 +1876,7 @@ Go to https://math.jacobsiler.com, tap "Join with Family Code" and enter the cod
       color: "var(--navy)",
       letterSpacing: "-1px",
       textShadow: "2px 3px 0 rgba(26,58,107,0.1)"
-    } }, "Math Adventure"), /* @__PURE__ */ React.createElement("p", { style: { color: "var(--muted)", fontWeight: 700, fontSize: "0.95rem", marginTop: 4 } }, "A joyful homeschool ", country === "US" ? "math" : "maths", " companion")), /* @__PURE__ */ React.createElement(FamilyBar, { familyCode, onParentMode, onAdminMode }), /* @__PURE__ */ React.createElement("div", { style: { ...S.card, padding: "14px 18px", marginBottom: 14, animation: "fadeUp 0.4s 0.05s ease both" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.78rem", fontWeight: 800, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 } }, "\u{1F30D} Curriculum"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, Object.entries(COUNTRY_LABELS).map(([code, cl2]) => /* @__PURE__ */ React.createElement("button", { key: code, onClick: () => onSetCountry(code), style: {
+    } }, "Math Adventure"), /* @__PURE__ */ React.createElement("p", { style: { color: "var(--muted)", fontWeight: 700, fontSize: "0.95rem", marginTop: 4 } }, "A joyful homeschool ", country === "US" ? "math" : "maths", " companion")), /* @__PURE__ */ React.createElement(FamilyBar, { familyCode, onParentMode, onAdminMode, onMergeFamily }), /* @__PURE__ */ React.createElement("div", { style: { ...S.card, padding: "14px 18px", marginBottom: 14, animation: "fadeUp 0.4s 0.05s ease both" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.78rem", fontWeight: 800, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 } }, "\u{1F30D} Curriculum"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, Object.entries(COUNTRY_LABELS).map(([code, cl2]) => /* @__PURE__ */ React.createElement("button", { key: code, onClick: () => onSetCountry(code), style: {
       border: `2px solid ${country === code ? "var(--blue)" : "#e0e0e0"}`,
       background: country === code ? "#eaf0ff" : "#fafafa",
       borderRadius: 20,
@@ -2192,7 +2134,193 @@ Go to https://math.jacobsiler.com, tap "Join with Family Code" and enter the cod
       transition: "all 0.18s"
     } }, lab))), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnPrimary, width: "100%" }, onClick: handleStart }, "Start Quiz! \u{1F680}")));
   }
-  function FlashGame({ config, onExit }) {
+  // Calculator type by grade: K-4 = none, 5-7 = basic, 8-10 = scientific, 11-12 = graphing
+  function calcTypeForGrade(gradeId) {
+    const n = parseInt(gradeId, 10) || 0;
+    if (isNaN(n) || n <= 4) return "none";
+    if (n <= 7) return "basic";
+    if (n <= 10) return "scientific";
+    return "graphing";
+  }
+  function BasicCalculator() {
+    const [expr, setExpr] = useState(""); const [result, setResult] = useState("");
+    const press = (v) => {
+      if (v === "=") { try { const r = Function('"use strict";return (' + expr.replace(/×/g,"*").replace(/÷/g,"/") + ")")(); setResult(String(r)); } catch { setResult("Err"); } }
+      else if (v === "C") { setExpr(""); setResult(""); }
+      else if (v === "⌫") { setExpr(e => e.slice(0,-1)); setResult(""); }
+      else { setExpr(e => e + v); setResult(""); }
+    };
+    const btns = [["7","8","9","÷"],["4","5","6","×"],["1","2","3","−"],["C","0",".","+"],[" ","⌫","=",""]];
+    return /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace" } },
+      /* @__PURE__ */ React.createElement("div", { style: { background: "#1a3a6b", color: "#fff", borderRadius: 10, padding: "8px 12px", marginBottom: 8, minHeight: 44, textAlign: "right" } },
+        /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.75rem", color: "#aac", minHeight: 16 } }, result ? "= " + result : expr || "0"),
+        /* @__PURE__ */ React.createElement("div", { style: { fontSize: "1.3rem", fontWeight: 700 } }, result || expr || "0")
+      ),
+      btns.map((row, ri) => /* @__PURE__ */ React.createElement("div", { key: ri, style: { display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 5, marginBottom: 5 } },
+        row.map((b, bi) => b === "" ? /* @__PURE__ */ React.createElement("div", { key: bi }) : /* @__PURE__ */ React.createElement("button", { key: bi, onClick: () => press(b), style: {
+          padding: "12px 4px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 800, fontSize: "1rem",
+          background: b === "=" ? "#06D6A0" : ["÷","×","−","+"].includes(b) ? "#2D6BE4" : b === "C" ? "#FF6B6B" : "#f0f0f0",
+          color: ["=","÷","×","−","+","C"].includes(b) ? "#fff" : "#222"
+        } }, b))
+      ))
+    );
+  }
+  function ScientificCalculator() {
+    const [expr, setExpr] = useState(""); const [result, setResult] = useState(""); const [deg, setDeg] = useState(true);
+    const toRad = (x) => deg ? x * Math.PI / 180 : x;
+    const press = (v) => {
+      if (v === "=") {
+        try {
+          let e = expr.replace(/×/g,"*").replace(/÷/g,"/").replace(/π/g,"Math.PI").replace(/√\(/g,"Math.sqrt(")
+            .replace(/sin\(/g,`Math.sin(toRad(`).replace(/cos\(/g,`Math.cos(toRad(`).replace(/tan\(/g,`Math.tan(toRad(`)
+            .replace(/log\(/g,"Math.log10(").replace(/ln\(/g,"Math.log(").replace(/\^/g,"**");
+          // close the toRad wrapper if trig was used
+          const r = Function('"use strict";var toRad='+toRad.toString()+';return (' + e + ")")();
+          setResult(parseFloat(r.toFixed(10)).toString());
+        } catch { setResult("Err"); }
+      } else if (v === "C") { setExpr(""); setResult(""); }
+      else if (v === "⌫") { setExpr(e => e.slice(0,-1)); setResult(""); }
+      else { setExpr(e => (result && !["÷","×","−","+","^"].includes(v) ? "" : e) + v); setResult(""); }
+    };
+    const rows = [
+      [["sin(","sin"],["cos(","cos"],["tan(","tan"],["π","π"]],
+      [["log(","log"],["ln(","ln"],["√(","√"],["^","^"]],
+      [["7","7"],["8","8"],["9","9"],["÷","÷"]],
+      [["4","4"],["5","5"],["6","6"],["×","×"]],
+      [["1","1"],["2","2"],["3","3"],["−","−"]],
+      [["C","C"],["0","0"],[".","."],["=","="]],
+      [["(",")"],[")",")"],["⌫","⌫"],[deg?"DEG":"RAD", deg?"DEG":"RAD"]],
+    ];
+    return /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "monospace" } },
+      /* @__PURE__ */ React.createElement("div", { style: { background: "#1a3a6b", color: "#fff", borderRadius: 10, padding: "8px 12px", marginBottom: 8, minHeight: 44, textAlign: "right" } },
+        /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.65rem", color: "#aac", minHeight: 14, wordBreak: "break-all" } }, expr || " "),
+        /* @__PURE__ */ React.createElement("div", { style: { fontSize: "1.2rem", fontWeight: 700 } }, result || "0")
+      ),
+      rows.map((row, ri) => /* @__PURE__ */ React.createElement("div", { key: ri, style: { display: "grid", gridTemplateColumns: `repeat(${row.length},1fr)`, gap: 4, marginBottom: 4 } },
+        row.map(([val, label], bi) => /* @__PURE__ */ React.createElement("button", { key: bi,
+          onClick: () => val === (deg?"DEG":"RAD") ? setDeg(d=>!d) : press(val), style: {
+            padding: "9px 2px", borderRadius: 7, border: "none", cursor: "pointer", fontWeight: 700, fontSize: "0.78rem",
+            background: val === "=" ? "#06D6A0" : ["÷","×","−","+","^"].includes(val) ? "#2D6BE4" : val === "C" ? "#FF6B6B" : ["sin(","cos(","tan(","log(","ln(","√(","π","(",")"].includes(val) ? "#9B5DE5" : val === (deg?"DEG":"RAD") ? "#FFD166" : "#f0f0f0",
+            color: ["=","÷","×","−","+","^","C","sin(","cos(","tan(","log(","ln(","√(","π","(",")"].includes(val) ? "#fff" : "#222"
+          }
+        }, label))
+      ))
+    );
+  }
+  function GraphingCalculator() {
+    const canvasRef = React.useRef(null);
+    const [fn, setFn] = useState("sin(x)"); const [err, setErr] = useState(""); const [zoom, setZoom] = useState(1);
+    const draw = React.useCallback(() => {
+      const c = canvasRef.current; if (!c) return;
+      const ctx = c.getContext("2d"); const w = c.width; const h = c.height;
+      ctx.clearRect(0,0,w,h);
+      ctx.fillStyle="#1a3a6b08"; ctx.fillRect(0,0,w,h);
+      const cx=w/2, cy=h/2, scale=40*zoom;
+      // Grid
+      ctx.strokeStyle="#e0e8f0"; ctx.lineWidth=1;
+      for(let x=cx%scale;x<w;x+=scale){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
+      for(let y=cy%scale;y<h;y+=scale){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+      // Axes
+      ctx.strokeStyle="#1a3a6b"; ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(w,cy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(cx,0);ctx.lineTo(cx,h);ctx.stroke();
+      // Axis labels
+      ctx.fillStyle="#1a3a6b99"; ctx.font="10px monospace"; ctx.textAlign="center";
+      for(let i=-5;i<=5;i++){if(i===0)continue; const px=cx+i*scale; ctx.fillText(i,px,cy+14);}
+      ctx.textAlign="right";
+      for(let i=-3;i<=3;i++){if(i===0)continue; const py=cy-i*scale; ctx.fillText(i,cx-4,py+4);}
+      // Plot
+      try {
+        const f = Function('"use strict";var x=arguments[0];with(Math){return '+fn.replace(/\^/g,"**")+"}");
+        ctx.strokeStyle="#2D6BE4"; ctx.lineWidth=2.5; ctx.beginPath(); let started=false;
+        for(let px=0;px<w;px++){
+          const x=(px-cx)/scale; let y; try{y=f(x);}catch{started=false;continue;}
+          if(!isFinite(y)||isNaN(y)||Math.abs(y)>1e6){started=false;continue;}
+          const py=cy-y*scale;
+          if(!started){ctx.moveTo(px,py);started=true;}else{ctx.lineTo(px,py);}
+        }
+        ctx.stroke(); setErr("");
+      } catch(e){setErr("Invalid expression");}
+    }, [fn, zoom]);
+    useEffect(()=>{ draw(); }, [draw]);
+    return /* @__PURE__ */ React.createElement("div", null,
+      /* @__PURE__ */ React.createElement("canvas", { ref: canvasRef, width: 280, height: 180, style: { borderRadius: 10, border: "2px solid #ddeeff", display: "block", marginBottom: 8, width: "100%" } }),
+      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 6, alignItems: "center" } },
+        /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, color: "#1a3a6b", fontSize: "0.85rem" } }, "y ="),
+        /* @__PURE__ */ React.createElement("input", { value: fn, onChange: e=>setFn(e.target.value), style: { ...S.input, marginBottom: 0, flex: 1, fontFamily: "monospace", fontSize: "0.9rem", padding: "6px 10px" } }),
+        /* @__PURE__ */ React.createElement("button", { onClick: ()=>setZoom(z=>Math.min(z*1.5,8)), style: { ...S.backBtn, padding: "6px 10px", fontSize: "1rem" } }, "+"),
+        /* @__PURE__ */ React.createElement("button", { onClick: ()=>setZoom(z=>Math.max(z/1.5,0.1)), style: { ...S.backBtn, padding: "6px 10px", fontSize: "1rem" } }, "−")
+      ),
+      err && /* @__PURE__ */ React.createElement("div", { style: { color: "#FF6B6B", fontSize: "0.78rem", fontWeight: 700 } }, err),
+      /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.7rem", color: "var(--muted)", fontWeight: 600 } }, "Use: sin(x), cos(x), x^2, sqrt(x), PI, abs(x)")
+    );
+  }
+  function ScratchPad() {
+    const canvasRef = React.useRef(null);
+    const drawing = React.useRef(false); const lastPos = React.useRef(null);
+    const [color, setColor] = useState("#1a3a6b"); const [size, setSize] = useState(3);
+    const getPos = (e, canvas) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height;
+      if (e.touches) { return { x: (e.touches[0].clientX - rect.left)*scaleX, y: (e.touches[0].clientY - rect.top)*scaleY }; }
+      return { x: (e.clientX-rect.left)*scaleX, y: (e.clientY-rect.top)*scaleY };
+    };
+    const startDraw = (e) => { e.preventDefault(); drawing.current=true; lastPos.current=getPos(e,canvasRef.current); };
+    const endDraw = () => { drawing.current=false; lastPos.current=null; };
+    const doDraw = (e) => {
+      if(!drawing.current) return; e.preventDefault();
+      const canvas=canvasRef.current; const ctx=canvas.getContext("2d");
+      const pos=getPos(e,canvas);
+      ctx.beginPath(); ctx.strokeStyle=color; ctx.lineWidth=size; ctx.lineCap="round"; ctx.lineJoin="round";
+      ctx.moveTo(lastPos.current.x,lastPos.current.y); ctx.lineTo(pos.x,pos.y); ctx.stroke();
+      lastPos.current=pos;
+    };
+    const clear = () => { const c=canvasRef.current; c.getContext("2d").clearRect(0,0,c.width,c.height); };
+    return /* @__PURE__ */ React.createElement("div", null,
+      /* @__PURE__ */ React.createElement("canvas", {
+        ref: canvasRef, width: 560, height: 220,
+        style: { width: "100%", borderRadius: 10, border: "2px solid #e0e0e0", background: "#fffdf9", display: "block", cursor: "crosshair", touchAction: "none" },
+        onMouseDown: startDraw, onMouseMove: doDraw, onMouseUp: endDraw, onMouseLeave: endDraw,
+        onTouchStart: startDraw, onTouchMove: doDraw, onTouchEnd: endDraw
+      }),
+      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 8, alignItems: "center", flexWrap: "wrap" } },
+        /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: "0.78rem", color: "var(--muted)" } }, "Colour:"),
+        ["#1a3a6b","#FF6B6B","#06D6A0","#FFD166","#9B5DE5","#2D6BE4","#000"].map(c => /* @__PURE__ */ React.createElement("button", { key: c, onClick: ()=>setColor(c), style: { width: 22, height: 22, borderRadius: "50%", border: `3px solid ${color===c?"#333":"transparent"}`, background: c, cursor: "pointer" } })),
+        /* @__PURE__ */ React.createElement("button", { onClick: ()=>setColor("#fff"), style: { width: 22, height: 22, borderRadius: "50%", border: `3px solid ${color==="#fff"?"#333":"#ccc"}`, background: "#fff", cursor: "pointer" }, title: "Eraser" }, "○"),
+        /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: "0.78rem", color: "var(--muted)", marginLeft: 4 } }, "Size:"),
+        [2,4,8].map(s => /* @__PURE__ */ React.createElement("button", { key: s, onClick: ()=>setSize(s), style: { width: s+16, height: s+16, borderRadius: "50%", border: `2px solid ${size===s?"#2D6BE4":"#ccc"}`, background: "#222", cursor: "pointer" } })),
+        /* @__PURE__ */ React.createElement("button", { onClick: clear, style: { ...S.backBtn, marginLeft: "auto", fontSize: "0.78rem", padding: "4px 12px", color: "#FF6B6B", borderColor: "#ffcccc" } }, "🗑 Clear")
+      )
+    );
+  }
+  function ToolDrawer({ gradeId }) {
+    const [open, setOpen] = useState(false);
+    const [tab, setTab] = useState("scratch");
+    const calcType = calcTypeForGrade(gradeId);
+    const tabs = [["scratch","✏️ Scratch"]];
+    if (calcType !== "none") tabs.push(["calc", calcType === "graphing" ? "📈 Graph" : calcType === "scientific" ? "🔬 Sci Calc" : "🔢 Calc"]);
+    return /* @__PURE__ */ React.createElement(React.Fragment, null,
+      /* @__PURE__ */ React.createElement("div", { style: {
+        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 500,
+        transform: open ? "translateY(0)" : "translateY(calc(100% - 44px))",
+        transition: "transform 0.35s cubic-bezier(0.4,0,0.2,1)"
+      } },
+        /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 12, padding: "6px 16px 0", background: "linear-gradient(135deg,#1a3a6b,#2D6BE4)", borderRadius: "18px 18px 0 0" } },
+          /* @__PURE__ */ React.createElement("button", { onClick: ()=>setOpen(o=>!o), style: { background: "none", border: "none", color: "#fff", fontWeight: 800, fontSize: "0.85rem", cursor: "pointer", padding: "4px 12px", display: "flex", alignItems: "center", gap: 6 } },
+            open ? "▼ Hide Tools" : "▲ Tools"
+          ),
+          tabs.map(([id,label]) => /* @__PURE__ */ React.createElement("button", { key: id, onClick: ()=>{setTab(id);setOpen(true);}, style: { background: tab===id && open ? "rgba(255,255,255,0.25)" : "none", border: "none", color: "#fff", fontWeight: tab===id&&open?800:600, fontSize: "0.82rem", cursor: "pointer", padding: "4px 12px", borderRadius: 20, transition: "all 0.2s" } }, label))
+        ),
+        /* @__PURE__ */ React.createElement("div", { style: { background: "#fffdf9", borderTop: "2px solid #e0e0e0", padding: "16px", maxHeight: "55vh", overflowY: "auto" } },
+          tab === "scratch" && /* @__PURE__ */ React.createElement(ScratchPad, null),
+          tab === "calc" && calcType === "basic" && /* @__PURE__ */ React.createElement(BasicCalculator, null),
+          tab === "calc" && calcType === "scientific" && /* @__PURE__ */ React.createElement(ScientificCalculator, null),
+          tab === "calc" && calcType === "graphing" && /* @__PURE__ */ React.createElement(GraphingCalculator, null)
+        )
+      )
+    );
+  }
+  function FlashGame({ config, profile, onExit }) {
     const [idx, setIdx] = useState(0);
     const [flipped, setFlipped] = useState(false);
     const problems = config.problems;
@@ -2262,9 +2390,10 @@ Go to https://math.jacobsiler.com, tap "Join with Family Code" and enter the cod
       flexShrink: 0,
       background: i === idx ? "var(--blue)" : "#ddd",
       transition: "background 0.2s"
-    } }))), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnSecondary, padding: "10px 20px" }, onClick: next }, "Next \u2192")), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginTop: 8, fontSize: "0.72rem", color: "#ccc", fontWeight: 600 } }, "Keyboard: \u2190 \u2192 to navigate \xB7 Space to flip"));
+    } }))), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnSecondary, padding: "10px 20px" }, onClick: next }, "Next \u2192")), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", marginTop: 8, fontSize: "0.72rem", color: "#ccc", fontWeight: 600 } }, "Keyboard: \u2190 \u2192 to navigate \xB7 Space to flip"), /* @__PURE__ */ React.createElement("div", { style: { height: 100 } })),
+      profile && /* @__PURE__ */ React.createElement(ToolDrawer, { gradeId: profile.gradeId }));
   }
-  function QuizGame({ config, onComplete, onExit }) {
+  function QuizGame({ config, profile, onComplete, onExit }) {
     const [idx, setIdx] = useState(0);
     const [score, setScore] = useState(0);
     const [answers, setAnswers] = useState([]);
@@ -2373,7 +2502,8 @@ Go to https://math.jacobsiler.com, tap "Join with Family Code" and enter the cod
       fontWeight: 800,
       animation: "fadeUp 0.2s ease",
       color: feedback === "correct" ? "#0d6e4f" : "#cc4444"
-    } }, feedback === "correct" ? ["Great job! \u2728", "Correct! \u{1F389}", "You got it! \u{1F31F}", "Excellent! \u{1F4AB}"][rnd(0, 3)] : `The answer is ${prob.answer} \u2014 you've got this! \u{1F4AA}`));
+    } }, feedback === "correct" ? ["Great job! \u2728", "Correct! \u{1F389}", "You got it! \u{1F31F}", "Excellent! \u{1F4AB}"][rnd(0, 3)] : `The answer is ${prob.answer} \u2014 you've got this! \u{1F4AA}`), /* @__PURE__ */ React.createElement("div", { style: { height: 100 } })),
+      profile && /* @__PURE__ */ React.createElement(ToolDrawer, { gradeId: profile.gradeId }));
   }
   function QuizResult({ result, onRetry, onHome }) {
     const { score, total, pct, answers } = result;
