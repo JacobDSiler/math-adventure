@@ -949,6 +949,9 @@ f(x) = x^${n2} + ${c2}`;
       localStorage.setItem(SK_PARENT_PIN, p);
     } catch {
     }
+    // Also push to Firebase so PIN syncs across devices
+    const fc = loadFamilyCode();
+    if (fc) saveFamilyToFirebase(fc, null, p);
   }
   function loadRecoveryEmail() {
     try {
@@ -1835,7 +1838,7 @@ f(x) = x^${n2} + ${c2}`;
       color: isDefaultPin ? "#856404" : "var(--muted)",
       cursor: "pointer",
       flexShrink: 0
-    } }, isDefaultPin ? "\u26A0\uFE0F Change PIN" : "\u{1F511} Change PIN"), /* @__PURE__ */ React.createElement("button", { onClick: () => setSwitchTab(true), style: { background: "#eaf4ff", border: "1.5px solid #c5deff", borderRadius: 20, padding: "3px 10px", fontSize: "0.72rem", fontWeight: 800, color: "var(--blue)", cursor: "pointer", flexShrink: 0 } }, "\u{1F517} Switch Family Code")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 20 } }, [["overview", "\u{1F4CA} Overview"], ["labels", "\u{1F3F7}\uFE0F Labels"], ["family", "\u{1F517} Family Tools"]].map(([t, l]) => /* @__PURE__ */ React.createElement("button", { key: t, onClick: () => setTab(t), style: {
+    } }, isDefaultPin ? "\u26A0\uFE0F Change PIN" : "\u{1F511} Change PIN")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 20 } }, [["overview", "\u{1F4CA} Overview"], ["labels", "\u{1F3F7}\uFE0F Labels"], ["family", "\u{1F517} Family Tools"]].map(([t, l]) => /* @__PURE__ */ React.createElement("button", { key: t, onClick: () => setTab(t), style: {
       border: `2px solid ${tab === t ? "var(--blue)" : "#e0e0e0"}`,
       background: tab === t ? "#eaf0ff" : "#fafafa",
       borderRadius: 20,
@@ -2087,14 +2090,20 @@ f(x) = x^${n2} + ${c2}`;
       const fc = loadFamilyCode();
       if (!fc) return;
       loadFamilyFromFirebase(fc).then(remote => {
-        if (remote && remote.profiles && remote.profiles.length > 0) {
-          setProfilesRaw(prev => {
-            const merged = mergeProfileLists(prev, remote.profiles);
-            saveProfiles(merged);
-            console.log("\u2705 Startup sync: merged", merged.length, "profiles from Firebase");
-            return merged;
-          });
-          if (remote.parentPin) saveParentPin(remote.parentPin);
+        if (remote) {
+          // Sync PIN — Firebase wins over localStorage so it's consistent across devices
+          if (remote.parentPin && remote.parentPin !== loadParentPin()) {
+            try { localStorage.setItem(SK_PARENT_PIN, remote.parentPin); } catch {}
+            console.log("✅ PIN synced from Firebase");
+          }
+          if (remote.profiles && remote.profiles.length > 0) {
+            setProfilesRaw(prev => {
+              const merged = mergeProfileLists(prev, remote.profiles);
+              saveProfiles(merged);
+              console.log("\u2705 Startup sync: merged", merged.length, "profiles from Firebase");
+              return merged;
+            });
+          }
         }
       }).catch(e => console.warn("Startup sync failed:", e));
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
