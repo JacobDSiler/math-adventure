@@ -1127,17 +1127,27 @@ f(x) = x^${n2} + ${c2}`;
       if (!fb) { console.warn("Firebase not available for save"); return; }
       try {
         const { db, doc, setDoc } = fb;
-        const payload = { ts: Date.now() };
-        if (profiles !== null && profiles !== undefined) payload.profiles = profiles;
-        if (parentPin !== undefined && parentPin !== null) payload.parentPin = parentPin;
-        await setDoc(doc(db, "families", familyCode), payload, { merge: true });
+        // Always use merge:false for profiles so deletions propagate to all devices.
+        // For PIN-only updates we use merge:true to avoid overwriting profiles.
+        if (profiles !== null && profiles !== undefined) {
+          // Full document write — this is the authoritative state
+          const payload = { profiles, ts: Date.now() };
+          if (parentPin !== undefined && parentPin !== null) payload.parentPin = parentPin;
+          await setDoc(doc(db, "families", familyCode), payload, { merge: false });
+        } else {
+          // PIN-only update — safe to merge so we don't clobber profiles
+          const payload = { ts: Date.now() };
+          if (parentPin !== undefined && parentPin !== null) payload.parentPin = parentPin;
+          await setDoc(doc(db, "families", familyCode), payload, { merge: true });
+        }
         console.log("✅ Firebase saved:", familyCode, profiles ? `(${profiles.length} profiles)` : "(PIN only)");
       } catch (e) {
         console.warn("saveFamilyToFirebase error:", e);
       }
     }, 1200);
   }
-  // Merge two profile arrays by id — keeps all unique profiles, remote wins on conflict
+  // Merge two profile arrays by id — used for intentional import/switch operations only.
+  // For Firebase sync, we use replaceFromFirebase() so deletes propagate correctly.
   function mergeProfileLists(local, remote) {
     const map = {};
     (local || []).forEach(p => { map[p.id] = p; });
@@ -2232,7 +2242,9 @@ f(x) = x^${n2} + ${c2}`;
     const [showMerge, setShowMerge] = useState(false);
     const [showCreatePin, setShowCreatePin] = useState(false);
     const familyCodeRef = React.useRef(familyCode);
+    const screenRef = React.useRef(screen);
     useEffect(() => { familyCodeRef.current = familyCode; }, [familyCode]);
+    useEffect(() => { screenRef.current = screen; }, [screen]);
     const setCountry = (c) => { setCountryRaw(c); saveCountry(c); };
     const setLabels = (l) => { setLabelsRaw(l); saveCustomLabels(l); };
     const setProfiles = (p) => {
@@ -2270,31 +2282,87 @@ f(x) = x^${n2} + ${c2}`;
       setGameConfig(null);
       setQuizResult(null);
     };
-    // On first mount, if we already have a family code, silently sync from Firebase
+    // ── Firebase sync ──────────────────────────────────────────────
+    // Firebase is the single source of truth.
+    // localStorage is only a fast-start cache — Firebase always wins.
+    // Sync runs: (1) on startup, (2) when the tab regains focus/visibility,
+    //            (3) after a configurable polling interval while the tab is active.
+    const _lastSyncRef = React.useRef(0);
+    const syncFromFirebase = React.useCallback(async (force = false) => {
+      const fc = familyCodeRef.current;
+      if (!fc) return;
+      // Never interrupt an active game session
+      const activeScreens = ["quizGame", "flashGame"];
+      if (!force && activeScreens.includes(screenRef.current)) return;
+      // Debounce: don't re-sync within 8 seconds unless forced
+      const now = Date.now();
+      if (!force && now - _lastSyncRef.current < 8000) return;
+      _lastSyncRef.current = now;
+      try {
+        const remote = await loadFamilyFromFirebase(fc);
+        if (!remote) return;
+        // Sync PINs — Firebase wins
+        if (remote.parentPin && remote.parentPin !== loadParentPin()) {
+          try { localStorage.setItem(SK_PARENT_PIN, remote.parentPin); } catch {}
+          console.log("✅ Parent PIN synced from Firebase");
+        }
+        // Profiles — Firebase is authoritative, replace local state completely
+        if (remote.profiles !== undefined) {
+          setProfilesRaw(prev => {
+            // Only update state if something actually changed (avoids unnecessary re-renders)
+            const prevJson = JSON.stringify(prev.map(p => p.id).sort());
+            const remoteJson = JSON.stringify((remote.profiles || []).map(p => p.id).sort());
+            if (prevJson === remoteJson && JSON.stringify(prev) === JSON.stringify(remote.profiles)) {
+              return prev; // no change
+            }
+            const fresh = remote.profiles || [];
+            saveProfiles(fresh);
+            console.log("✅ Profiles synced from Firebase:", fresh.length, "profiles");
+            return fresh;
+          });
+        }
+        // Also patch activeProfile if it changed — but only when not mid-game
+        setActiveProfile(prev => {
+          if (!prev) return prev;
+          const updated = (remote.profiles || []).find(p => p.id === prev.id);
+          if (!updated) return prev; // profile was deleted on another device — keep showing until user navigates away
+          return updated;
+        });
+      } catch (e) {
+        console.warn("Firebase sync error:", e);
+      }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    // Startup sync
     useEffect(() => {
       const fc = loadFamilyCode();
       if (!fc) return;
-      loadFamilyFromFirebase(fc).then(remote => {
-        if (remote) {
-          // Sync PIN — Firebase wins over localStorage so it's consistent across devices
-          if (remote.parentPin && remote.parentPin !== loadParentPin()) {
-            try { localStorage.setItem(SK_PARENT_PIN, remote.parentPin); } catch {}
-            console.log("✅ PIN synced from Firebase");
-          }
-          if (remote.profiles && remote.profiles.length > 0) {
-            setProfilesRaw(prev => {
-              const merged = mergeProfileLists(prev, remote.profiles);
-              saveProfiles(merged);
-              console.log("\u2705 Startup sync: merged", merged.length, "profiles from Firebase");
-              return merged;
-            });
-          }
-        }
-      }).catch(e => console.warn("Startup sync failed:", e));
+      // Sync admin PIN in background
       loadAdminPinFromFirebase().then(pin => {
         if (pin) { try { localStorage.setItem(SK_ADMIN_PIN, pin); } catch {} }
       }).catch(() => {});
+      // Full profile sync (force = true on first load)
+      syncFromFirebase(true);
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    // Re-sync whenever the tab becomes visible again (user switches back from another app/tab)
+    useEffect(() => {
+      const handleVisibility = () => {
+        if (document.visibilityState === "visible") syncFromFirebase(false);
+      };
+      const handleFocus = () => syncFromFirebase(false);
+      document.addEventListener("visibilitychange", handleVisibility);
+      window.addEventListener("focus", handleFocus);
+      return () => {
+        document.removeEventListener("visibilitychange", handleVisibility);
+        window.removeEventListener("focus", handleFocus);
+      };
+    }, [syncFromFirebase]);
+    // Polling: re-sync every 30 seconds while the tab is active
+    useEffect(() => {
+      const interval = setInterval(() => {
+        if (document.visibilityState === "visible") syncFromFirebase(false);
+      }, 30000);
+      return () => clearInterval(interval);
+    }, [syncFromFirebase]);
     const handleFamilyComplete = (fc, remoteProfiles, mode) => {
       familyCodeRef.current = fc;
       setFamilyCode(fc);
