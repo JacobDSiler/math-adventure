@@ -68,6 +68,8 @@
       flag: "\u{1F1EE}\u{1F1EA}",
       name: "Ireland",
       grades: {
+        "PS": { label: "Nursery", name: "Nursery (age 2–3)" },
+        "PK": { label: "Pre-Sch", name: "Pre-School (age 3–4)" },
         "K": { label: "JI", name: "Junior Infants" },
         "1": { label: "SI", name: "Senior Infants" },
         "2": { label: "1st", name: "1st Class" },
@@ -87,6 +89,8 @@
       flag: "\u{1F1EC}\u{1F1E7}",
       name: "UK",
       grades: {
+        "PS": { label: "Nursery", name: "Nursery (age 2–3)" },
+        "PK": { label: "Pre-Sch", name: "Pre-School (age 3–4)" },
         "K": { label: "Rec", name: "Reception" },
         "1": { label: "Y1", name: "Year 1" },
         "2": { label: "Y2", name: "Year 2" },
@@ -106,6 +110,8 @@
       flag: "\u{1F1FA}\u{1F1F8}",
       name: "US",
       grades: {
+        "PS": { label: "Nursery", name: "Nursery (age 2–3)" },
+        "PK": { label: "Pre-K", name: "Pre-K (age 3–4)" },
         "K": { label: "K", name: "Kindergarten" },
         "1": { label: "G1", name: "1st Grade" },
         "2": { label: "G2", name: "2nd Grade" },
@@ -130,8 +136,22 @@
   }
   const GRADES = [
     {
+      id: "PS",
+      age: "2–3",
+      color: "#FFA8CC",
+      emoji: "👶",
+      topics: ["early_counting", "early_colours", "early_shapes", "early_match"]
+    },
+    {
+      id: "PK",
+      age: "3–4",
+      color: "#FFB347",
+      emoji: "🧸",
+      topics: ["early_counting", "early_shapes", "early_patterns", "early_compare", "early_numbers"]
+    },
+    {
       id: "K",
-      age: "4\u20135",
+      age: "4–5",
       color: "#FFD166",
       emoji: "\u{1F392}",
       topics: ["counting", "addition_basic", "subtraction_basic", "shapes"]
@@ -222,6 +242,13 @@
     }
   ];
   const TOPIC_LABELS = {
+    early_counting: "Counting 1–5",
+    early_colours: "Colours",
+    early_shapes: "Shapes",
+    early_match: "Matching & Sorting",
+    early_patterns: "Patterns",
+    early_compare: "Big & Small",
+    early_numbers: "Number Names 1–5",
     counting: "Counting",
     addition_basic: "Basic Addition",
     addition: "Addition",
@@ -256,6 +283,13 @@
     calculus_intro: "Intro to Calculus"
   };
   const TOPIC_EMOJIS = {
+    early_counting: "🤟",
+    early_colours: "🌈",
+    early_shapes: "🔵",
+    early_match: "🔍",
+    early_patterns: "💜",
+    early_compare: "🐘",
+    early_numbers: "🔢",
     counting: "\u{1F522}",
     addition_basic: "\u2795",
     addition: "\u2795",
@@ -290,6 +324,13 @@
     calculus_intro: "\u222B"
   };
   const TOPIC_RESOURCES = {
+    early_counting: ["Count fingers together — hold up 1, 2, 3, 4, 5!", "Count steps as you walk upstairs", "Khan Academy Kids: Counting"],
+    early_colours: ["Name colours on a walk — red door, green leaf, blue sky!", "Sort coloured toys into groups", "Starfall.com: Colours"],
+    early_shapes: ["Find circles, squares and triangles around the house", "Draw shapes in sand or on foggy glass", "PBS Kids: Shapes"],
+    early_match: ["Sort socks by colour when folding laundry", "Pair matching animals or toy cars together", "Starfall.com: Matching"],
+    early_patterns: ["Clap-stomp-clap-stomp — make body-percussion patterns!", "Thread beads in alternating colours", "ABCmouse: Patterns"],
+    early_compare: ["Compare shoes — who has the biggest? Smallest?", "Stack cups tallest to shortest", "Khan Academy Kids: Sizes"],
+    early_numbers: ["Sing 1-2-3-4-5 once I caught a fish alive!", "Draw 1 dot, 2 dots… up to 5 dots", "Starfall.com: Numbers"],
     counting: ["Count real objects at home \u2014 spoons, toys, steps!", "Draw a number line and point to each number", "Khan Academy Kids: Counting & Numbers"],
     addition_basic: ["Use fingers or counters to count up from the bigger number", "Make 'fact family' triangles (2+3=5, 5-3=2)", "Khan Academy: Basic Addition"],
     addition: ["Try 'make a 10' \u2014 fill up to 10 first, then add the rest", "Use base-10 blocks or draw hundreds/tens/ones", "IXL Math: Addition practice"],
@@ -354,10 +395,121 @@
     }
     return a;
   }
+  // Pre-school answer pool for choice generation
+  const EARLY_COLOUR_POOL = ["Red","Blue","Green","Yellow","Orange","Purple","Pink","White"];
+  const EARLY_SHAPE_POOL  = ["Circle","Square","Triangle","Rectangle"];
+  const EARLY_SIZE_POOL   = ["🐘 Elephant","🐁 Mouse","🐘 Big","🐁 Small","🛎 Big","📏 Short"];
+  const EARLY_WORD_POOL   = ["one","two","three","four","five"];
+
   function generateProblem(topic, difficulty) {
     const hard = difficulty === "hard", easy = difficulty === "easy";
-    let q, a, hint = "";
+    let q, a, hint = "", isEarly = false;
     switch (topic) {
+      /* ---- NURSERY / PRE-SCHOOL TOPICS ---- */
+      case "early_counting": {
+        isEarly = true;
+        const n = rnd(1, 5);
+        const emojis = ["🌟","🍎","🐾","🌸","🏀"];
+        const em = emojis[rnd(0, emojis.length-1)];
+        q = em.repeat(n) + "\n\nHow many " + em + " ?";
+        a = n;
+        hint = "Count them one by one on your fingers!";
+        break;
+      }
+      case "early_colours": {
+        isEarly = true;
+        const clrs = [
+          {q:"🍅 A tomato is…",a:"Red"},
+          {q:"🍋 A lemon is…",a:"Yellow"},
+          {q:"🌱 Grass is…",a:"Green"},
+          {q:"🫐 A blueberry is…",a:"Blue"},
+          {q:"🍊 An orange is…",a:"Orange"},
+          {q:"💦 The sky is…",a:"Blue"},
+          {q:"🌸 A rose is…",a:"Pink"},
+          {q:"☁️ Clouds are…",a:"White"},
+          {q:"🍇 Grapes are…",a:"Purple"},
+        ];
+        const item = clrs[rnd(0,clrs.length-1)];
+        q = item.q; a = item.a;
+        hint = "Think about the colour of that thing!";
+        break;
+      }
+      case "early_shapes": {
+        isEarly = true;
+        const sh = [
+          {q:"A ball is shaped like a…",a:"Circle"},
+          {q:"A door is shaped like a…",a:"Rectangle"},
+          {q:"A slice of pizza is shaped like a…",a:"Triangle"},
+          {q:"A window is shaped like a…",a:"Square"},
+          {q:"A coin is shaped like a…",a:"Circle"},
+          {q:"A book is shaped like a…",a:"Rectangle"},
+          {q:"A roof is shaped like a…",a:"Triangle"},
+        ];
+        const item = sh[rnd(0,sh.length-1)];
+        q = item.q; a = item.a;
+        hint = "Look around — can you spot that shape?";
+        break;
+      }
+      case "early_match": {
+        isEarly = true;
+        const pairs = [
+          {q:"🐶🐶🐈🐶\nWhich one is different?",a:"🐈 Cat"},
+          {q:"🔴🔴🔵🔴\nWhich one is different?",a:"🔵 Blue circle"},
+          {q:"🍎🍎🍊🍎\nWhich one is different?",a:"🍊 Orange"},
+          {q:"⭐⭐⭐❤️\nWhich one is different?",a:"❤️ Heart"},
+          {q:"🐘🐘🐰🐘\nWhich one is different?",a:"🐰 Rabbit"},
+          {q:"🟥🟥🟦🟥\nWhich one is different?",a:"🟦 Blue square"},
+        ];
+        const item = pairs[rnd(0,pairs.length-1)];
+        q = item.q; a = item.a; hint = "One of them doesn’t belong!";
+        break;
+      }
+      case "early_patterns": {
+        isEarly = true;
+        const pats = [
+          {seq:"🔴🔵🔴🔵🔴",next:"🔵",hint:"Red, Blue, Red, Blue…"},
+          {seq:"⭐🌙⭐🌙⭐",next:"🌙",hint:"Star, Moon, Star, Moon…"},
+          {seq:"🐶🐱🐶🐱🐶",next:"🐱",hint:"Dog, Cat, Dog, Cat…"},
+          {seq:"🍎🍊🍎🍊🍎",next:"🍊",hint:"Apple, Orange, Apple…"},
+          {seq:"🟥🟦🟥🟦🟥",next:"🟦",hint:"Red, Blue, Red, Blue…"},
+        ];
+        const p = pats[rnd(0,pats.length-1)];
+        q = p.seq + "\n\nWhat comes next?"; a = p.next; hint = p.hint;
+        break;
+      }
+      case "early_compare": {
+        isEarly = true;
+        const items = [
+          {q:"🐘 Elephant vs 🐁 Mouse\n\nWhich is BIGGER?",a:"🐘 Elephant"},
+          {q:"🏠 House vs 🐜 Ant\n\nWhich is SMALLER?",a:"🐜 Ant"},
+          {q:"🌳 Tree vs 🌱 Sprout\n\nWhich is TALLER?",a:"🌳 Tree"},
+          {q:"🚌 Bus vs 🚗 Car\n\nWhich is BIGGER?",a:"🚌 Bus"},
+          {q:"🍉 Watermelon vs 🍇 Grapes\n\nWhich is SMALLER?",a:"🍇 Grapes"},
+          {q:"🦁 Lion vs 🐱 Cat\n\nWhich is BIGGER?",a:"🦁 Lion"},
+        ];
+        const item = items[rnd(0,items.length-1)];
+        q = item.q; a = item.a; hint = "Look at the pictures and compare!";
+        break;
+      }
+      case "early_numbers": {
+        isEarly = true;
+        const n = rnd(1,5);
+        const words = ["","one","two","three","four","five"];
+        const type = rnd(0,2);
+        if (type === 0) {
+          q = "The number " + n + " is called…"; a = words[n];
+          hint = "Say the number word out loud!";
+        } else if (type === 1) {
+          const prev = n - 1;
+          q = (prev === 0 ? "What number comes after 0?" : "What comes after " + prev + "?");
+          a = n; hint = "Count up one more!";
+        } else {
+          q = "Can you show " + n + " fingers?\nHow many is that?";
+          a = n; hint = "Count your fingers!";
+        }
+        break;
+      }
+      /* ---- END EARLY TOPICS ---- */
       case "counting": {
         const n = easy ? rnd(2, 10) : hard ? rnd(20, 50) : rnd(10, 20);
         q = `What comes after ${n - 1}?`;
@@ -670,10 +822,39 @@ f(x) = x^${n2} + ${c2}`;
         a = 2;
       }
     }
-    return { question: q, answer: a, hint, topic };
+    return { question: q, answer: a, hint, topic, isEarly: isEarly || false };
   }
-  function generateChoices(correct) {
+  function generateChoices(correct, topic) {
     const cs = String(correct);
+    // --- Early / pre-school topics: text or emoji answers ---
+    if (topic && topic.startsWith("early_")) {
+      const numVal = parseFloat(cs);
+      if (!isNaN(numVal) && numVal >= 1 && numVal <= 5) {
+        // Numeric 1-5 answer
+        const pool = ["1","2","3","4","5"].filter(v => v !== cs);
+        const chosen = pool.sort(() => Math.random()-0.5).slice(0,3);
+        return [cs, ...chosen].sort(() => Math.random()-0.5);
+      }
+      // Text or emoji — build a pool from the right category
+      let pool = [];
+      if (EARLY_COLOUR_POOL.includes(cs))      pool = EARLY_COLOUR_POOL;
+      else if (EARLY_SHAPE_POOL.includes(cs))  pool = EARLY_SHAPE_POOL;
+      else if (EARLY_WORD_POOL.includes(cs))   pool = EARLY_WORD_POOL;
+      else {
+        // Emoji / mixed answers — make 3 dummy distractors from known emoji
+        const emojiPool = ["🐈 Cat","🐵 Monkey","🐶 Dog","🍎 Apple",
+          "🍊 Orange","🟥 Red square","🟦 Blue square","🟳 White square",
+          "🐘 Elephant","🐁 Mouse","🐰 Rabbit","🦁 Lion",
+          "🍉 Watermelon","🍇 Grapes","🐜 Ant","🚌 Bus","🚗 Car",
+          "🌙 Moon","⭐ Star","❤️ Heart","🌱 Sprout","🌳 Tree",
+          "🔵 Blue circle","🐱 Cat","🌊 Wave"];
+        const others = emojiPool.filter(e => e !== cs).sort(() => Math.random()-0.5).slice(0,3);
+        return [cs, ...others].sort(() => Math.random()-0.5);
+      }
+      const others = pool.filter(v => v !== cs).sort(() => Math.random()-0.5).slice(0,3);
+      return [cs, ...others].sort(() => Math.random()-0.5);
+    }
+    // --- Standard numeric / algebraic choices ---
     const set = /* @__PURE__ */ new Set([cs]);
     const offsets = [1, 2, 3, 5, 10, -1, -2, -3, -5, 4, -4, 7, -7];
     let tries = 0;
@@ -899,18 +1080,27 @@ f(x) = x^${n2} + ${c2}`;
       return [];
     }
   }
-  // Returns { profiles, parentPin } or null
-  async function loadFamilyFromFirebase(familyCode) {
+  // Returns { profiles, parentPin } or null — retries up to 3x on network hiccup
+  async function loadFamilyFromFirebase(familyCode, _attempt) {
+    _attempt = _attempt || 0;
     const fb = await getDb();
-    if (!fb) return null;
+    if (!fb) { console.warn("Firebase not ready"); return null; }
     try {
       const { db, doc, getDoc } = fb;
       const snap = await getDoc(doc(db, "families", familyCode));
-      if (!snap.exists()) return null;
+      if (!snap.exists()) {
+        console.log("loadFamilyFromFirebase: no doc for", familyCode);
+        return null;
+      }
       const data = snap.data();
+      console.log("✅ Firebase loaded:", familyCode, (data.profiles||[]).length, "profiles");
       return { profiles: data.profiles || [], parentPin: data.parentPin || null };
     } catch (e) {
-      console.warn("loadFamilyFromFirebase:", e);
+      console.warn("loadFamilyFromFirebase attempt", _attempt, e);
+      if (_attempt < 3) {
+        await new Promise(r => setTimeout(r, 700 * (_attempt + 1)));
+        return loadFamilyFromFirebase(familyCode, _attempt + 1);
+      }
       return null;
     }
   }
@@ -1194,15 +1384,31 @@ f(x) = x^${n2} + ${c2}`;
       const trimmed = code.trim().toUpperCase();
       if (trimmed.length < 5) { setErr("Please enter a valid family code."); return; }
       setLoading(true); setErr("");
-      const remote = await loadFamilyFromFirebase(trimmed);
+      let remote = null;
+      try { remote = await loadFamilyFromFirebase(trimmed); } catch(e) { console.warn(e); }
       setLoading(false);
+      if (remote === null) {
+        // Could be a network issue or a genuinely new code — let parent proceed either way
+        setErr("⚠️ Couldn't reach the server. Check your internet and try again, or tap Join anyway to continue offline.");
+        // Give them an explicit "join anyway" path — we still save the code
+        saveFamilyCode(trimmed);
+        return;
+      }
       saveFamilyCode(trimmed);
-      if (remote) {
-        if (remote.parentPin) saveParentPin(remote.parentPin);
-        onComplete(trimmed, remote.profiles && remote.profiles.length > 0 ? remote.profiles : null, "join");
+      if (remote.parentPin) saveParentPin(remote.parentPin);
+      const loaded = remote.profiles && remote.profiles.length > 0 ? remote.profiles : null;
+      if (loaded) {
+        setErr("✅ Found " + loaded.length + " profile(s)! Joining…");
+        setTimeout(() => onComplete(trimmed, loaded, "join"), 600);
       } else {
         onComplete(trimmed, null, "join");
       }
+    };
+    const joinAnyway = () => {
+      const trimmed = code.trim().toUpperCase();
+      if (trimmed.length < 5) return;
+      saveFamilyCode(trimmed);
+      onComplete(trimmed, null, "join");
     };
     return /* @__PURE__ */ React.createElement("div", { style: {
       position: "fixed", inset: 0,
@@ -1226,11 +1432,12 @@ f(x) = x^${n2} + ${c2}`;
           onChange: (e) => setCode(e.target.value.toUpperCase()),
           onKeyDown: (e) => e.key === "Enter" && joinFamily(), maxLength: 10
         }),
-        err && /* @__PURE__ */ React.createElement("div", { style: { color: "var(--coral)", fontWeight: 700, fontSize: "0.82rem", marginBottom: 8 } }, err),
+        err && /* @__PURE__ */ React.createElement("div", { style: { color: err.startsWith("\u2705") ? "#0d6e4f" : "var(--coral)", fontWeight: 700, fontSize: "0.82rem", marginBottom: 8 } }, err),
         /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 8 } },
           /* @__PURE__ */ React.createElement("button", { style: { ...S.btnSecondary, flex: 1 }, onClick: () => setMode("choice") }, "\u2190 Back"),
           /* @__PURE__ */ React.createElement("button", { style: { ...S.btnPrimary, flex: 2, opacity: loading ? 0.5 : 1 }, disabled: loading, onClick: joinFamily }, loading ? "Joining\u2026" : "Join Family \u2192")
-        )
+        ),
+        err && err.startsWith("\u26a0") && /* @__PURE__ */ React.createElement("button", { style: { ...S.btnSecondary, width: "100%", marginTop: 8, fontSize: "0.82rem" }, onClick: joinAnyway }, "Join anyway (offline) \u2192")
       )
     ));
   }
@@ -1628,7 +1835,7 @@ f(x) = x^${n2} + ${c2}`;
       color: isDefaultPin ? "#856404" : "var(--muted)",
       cursor: "pointer",
       flexShrink: 0
-    } }, isDefaultPin ? "\u26A0\uFE0F Change PIN" : "\u{1F511} Change PIN"), /* @__PURE__ */ React.createElement("button", { onClick: () => setSwitchTab(true), style: { background: "#eaf4ff", border: "1.5px solid #c5deff", borderRadius: 20, padding: "3px 10px", fontSize: "0.72rem", fontWeight: 800, color: "var(--blue)", cursor: "pointer", flexShrink: 0 } }, "\u{1F517} Switch Family Code")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 20 } }, [["overview", "\u{1F4CA} Overview"], ["labels", "\u{1F3F7}\uFE0F Custom Labels"]].map(([t, l]) => /* @__PURE__ */ React.createElement("button", { key: t, onClick: () => setTab(t), style: {
+    } }, isDefaultPin ? "\u26A0\uFE0F Change PIN" : "\u{1F511} Change PIN"), /* @__PURE__ */ React.createElement("button", { onClick: () => setSwitchTab(true), style: { background: "#eaf4ff", border: "1.5px solid #c5deff", borderRadius: 20, padding: "3px 10px", fontSize: "0.72rem", fontWeight: 800, color: "var(--blue)", cursor: "pointer", flexShrink: 0 } }, "\u{1F517} Switch Family Code")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 20 } }, [["overview", "\u{1F4CA} Overview"], ["labels", "\u{1F3F7}\uFE0F Labels"], ["family", "\u{1F517} Family Tools"]].map(([t, l]) => /* @__PURE__ */ React.createElement("button", { key: t, onClick: () => setTab(t), style: {
       border: `2px solid ${tab === t ? "var(--blue)" : "#e0e0e0"}`,
       background: tab === t ? "#eaf0ff" : "#fafafa",
       borderRadius: 20,
@@ -1718,7 +1925,107 @@ f(x) = x^${n2} + ${c2}`;
         }
       },
       "Reset to Defaults"
-    ))));
+    )),
+    tab === "family" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 16 } },
+      /* @__PURE__ */ React.createElement("div", { style: { background: "#f0f8ff", borderRadius: 16, padding: "14px 16px", border: "1.5px solid #ddeeff" } },
+        /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "'Baloo 2',cursive", fontWeight: 800, color: "var(--navy)", marginBottom: 6, fontSize: "1rem" } }, "\u{1F517} Import Profiles from Another Code"),
+        /* @__PURE__ */ React.createElement("p", { style: { fontSize: "0.82rem", color: "var(--muted)", fontWeight: 600, marginBottom: 12, lineHeight: 1.5 } }, "Enter another family code to pull its learner profiles into your current family. Useful if your children were set up under different codes."),
+        /* @__PURE__ */ React.createElement(ImportSection, { currentProfiles: profiles, familyCode, onMerge: (merged) => { /* pass up via prop */ window.__pendingMerge = merged; onClose(); } })
+      ),
+      /* @__PURE__ */ React.createElement("div", { style: { background: "#fff8e1", borderRadius: 16, padding: "14px 16px", border: "1.5px solid #FFD166" } },
+        /* @__PURE__ */ React.createElement("div", { style: { fontFamily: "'Baloo 2',cursive", fontWeight: 800, color: "#856404", marginBottom: 6, fontSize: "1rem" } }, "\u{1F504} Switch to a Different Family Code"),
+        /* @__PURE__ */ React.createElement("p", { style: { fontSize: "0.82rem", color: "var(--muted)", fontWeight: 600, marginBottom: 12, lineHeight: 1.5 } }, "Move to a different family code as your primary. Your current profiles will be merged with that family's data."),
+        /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } },
+          /* @__PURE__ */ React.createElement("input", {
+            style: { ...S.input, marginBottom: 0, flex: 1, textTransform: "uppercase", letterSpacing: 2, fontWeight: 800, textAlign: "center" },
+            placeholder: "MA-WXYZ", value: switchCode,
+            onChange: e => setSwitchCode(e.target.value.toUpperCase()),
+            onKeyDown: e => e.key === "Enter" && handleSwitchLookup(), maxLength: 10
+          }),
+          /* @__PURE__ */ React.createElement("button", {
+            style: { ...S.btnPrimary, flexShrink: 0, padding: "10px 14px", fontSize: "0.88rem", opacity: switchLoading ? 0.5 : 1 },
+            disabled: switchLoading, onClick: handleSwitchLookup
+          }, switchLoading ? "\u2026" : "Look up")
+        ),
+        switchErr && /* @__PURE__ */ React.createElement("div", { style: { color: "var(--coral)", fontWeight: 700, fontSize: "0.82rem", marginTop: 8 } }, switchErr),
+        switchPreview && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12 } },
+          /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, color: "var(--navy)", marginBottom: 8, fontSize: "0.88rem" } }, "Found ", switchPreview.profiles.length, " profile(s) under ", switchPreview.code),
+          /* @__PURE__ */ React.createElement("div", { style: { background: "#e8fdf6", borderRadius: 10, padding: "10px 12px", fontSize: "0.8rem", fontWeight: 600, color: "#0d6e4f", marginBottom: 12 } },
+            "\u2139\ufe0f Your profiles will be merged and ", /* @__PURE__ */ React.createElement("strong", null, switchPreview.code), " becomes your primary code."
+          ),
+          /* @__PURE__ */ React.createElement("button", { style: { ...S.btnPrimary, width: "100%" }, onClick: handleSwitchConfirm },
+            "\u{1F504} Switch to " + switchPreview.code
+          )
+        )
+      )
+    )));
+  }
+  function ImportSection({ currentProfiles, familyCode, onMerge }) {
+    const [code, setCode] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [preview, setPreview] = useState(null);
+    const [err, setErr] = useState("");
+    const [done, setDone] = useState(false);
+    const lookup = async () => {
+      const trimmed = code.trim().toUpperCase();
+      if (trimmed.length < 5) { setErr("Enter a valid family code."); return; }
+      if (trimmed === familyCode) { setErr("That's already your family code!"); return; }
+      setLoading(true); setErr(""); setPreview(null);
+      const remote = await loadFamilyFromFirebase(trimmed);
+      setLoading(false);
+      if (!remote || !remote.profiles || remote.profiles.length === 0) {
+        setErr("No profiles found for that code. Double-check it and try again.");
+        return;
+      }
+      const curIds = new Set(currentProfiles.map(p => p.id));
+      setPreview({
+        profiles: remote.profiles,
+        newOnes: remote.profiles.filter(p => !curIds.has(p.id)),
+        dupes: remote.profiles.filter(p => curIds.has(p.id)),
+        code: trimmed
+      });
+    };
+    const doMerge = () => {
+      if (!preview) return;
+      const map = {};
+      currentProfiles.forEach(p => { map[p.id] = p; });
+      preview.profiles.forEach(p => { map[p.id] = p; });
+      onMerge(Object.values(map));
+      setDone(true);
+    };
+    if (done) return /* @__PURE__ */ React.createElement("div", { style: { color: "#0d6e4f", fontWeight: 800, fontSize: "0.9rem", textAlign: "center", padding: 12 } }, "\u2705 Profiles merged successfully!");
+    return /* @__PURE__ */ React.createElement("div", null,
+      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } },
+        /* @__PURE__ */ React.createElement("input", {
+          style: { ...S.input, marginBottom: 0, flex: 1, textTransform: "uppercase", letterSpacing: 2 },
+          placeholder: "MA-WXYZ", value: code,
+          onChange: e => setCode(e.target.value.toUpperCase()),
+          onKeyDown: e => e.key === "Enter" && lookup(), maxLength: 10
+        }),
+        /* @__PURE__ */ React.createElement("button", {
+          style: { ...S.btnPrimary, flexShrink: 0, padding: "10px 14px", fontSize: "0.88rem", opacity: loading ? 0.5 : 1 },
+          disabled: loading, onClick: lookup
+        }, loading ? "\u2026" : "Look up")
+      ),
+      err && /* @__PURE__ */ React.createElement("div", { style: { color: "var(--coral)", fontWeight: 700, fontSize: "0.82rem", marginTop: 8 } }, err),
+      preview && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10 } },
+        preview.newOnes.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 6 } },
+          /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.72rem", fontWeight: 800, color: "#0d6e4f", marginBottom: 4 } }, "\u2795 NEW profiles (will be added)"),
+          preview.newOnes.map(p => /* @__PURE__ */ React.createElement("div", { key: p.id, style: { display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "#e8fdf6", borderRadius: 10, marginBottom: 4 } },
+            /* @__PURE__ */ React.createElement("span", null, p.avatar), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: "0.85rem" } }, p.name)
+          ))
+        ),
+        preview.dupes.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 10 } },
+          /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.72rem", fontWeight: 800, color: "#856404", marginBottom: 4 } }, "\u{1F504} UPDATE (remote data wins)"),
+          preview.dupes.map(p => /* @__PURE__ */ React.createElement("div", { key: p.id, style: { display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "#fff8e1", borderRadius: 10, marginBottom: 4 } },
+            /* @__PURE__ */ React.createElement("span", null, p.avatar), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: "0.85rem" } }, p.name)
+          ))
+        ),
+        /* @__PURE__ */ React.createElement("button", { style: { ...S.btnPrimary, width: "100%" }, onClick: doMerge },
+          "\u{1F517} Merge " + preview.profiles.length + " profile(s) in"
+        )
+      )
+    );
   }
   function MathAdventure() {
     const [profiles, setProfilesRaw] = useState(() => loadProfiles());
@@ -1775,6 +2082,22 @@ f(x) = x^${n2} + ${c2}`;
       setGameConfig(null);
       setQuizResult(null);
     };
+    // On first mount, if we already have a family code, silently sync from Firebase
+    useEffect(() => {
+      const fc = loadFamilyCode();
+      if (!fc) return;
+      loadFamilyFromFirebase(fc).then(remote => {
+        if (remote && remote.profiles && remote.profiles.length > 0) {
+          setProfilesRaw(prev => {
+            const merged = mergeProfileLists(prev, remote.profiles);
+            saveProfiles(merged);
+            console.log("\u2705 Startup sync: merged", merged.length, "profiles from Firebase");
+            return merged;
+          });
+          if (remote.parentPin) saveParentPin(remote.parentPin);
+        }
+      }).catch(e => console.warn("Startup sync failed:", e));
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
     const handleFamilyComplete = (fc, remoteProfiles, mode) => {
       familyCodeRef.current = fc;
       setFamilyCode(fc);
@@ -1810,13 +2133,12 @@ f(x) = x^${n2} + ${c2}`;
     return /* @__PURE__ */ React.createElement(React.Fragment, null,
       showConfetti && /* @__PURE__ */ React.createElement(Confetti, null),
       showFamilySetup && /* @__PURE__ */ React.createElement(FamilySetup, { onComplete: handleFamilyComplete }),
-      showMerge && /* @__PURE__ */ React.createElement(MergeFamilyModal, { currentProfiles: profiles, onMerge: handleMerge, onClose: () => setShowMerge(false) }),
       showParentPin && /* @__PURE__ */ React.createElement(PinModal, { title: "Parent & Teacher Mode", subtitle: "Enter your parent PIN to continue", correctPin: loadParentPin(), onSuccess: () => { setShowParentPin(false); setShowParent(true); }, onCancel: () => setShowParentPin(false) }),
       showAdminPin && /* @__PURE__ */ React.createElement(PinModal, { title: "Admin Mode", subtitle: "Enter the admin PIN", correctPin: ADMIN_PIN_HASH, onSuccess: () => { setShowAdminPin(false); setShowAdmin(true); }, onCancel: () => setShowAdminPin(false) }),
-      showParent && /* @__PURE__ */ React.createElement(ParentPanel, { profiles, country, familyCode, labels, onUpdateLabels: (l) => setLabels(l), onClose: () => setShowParent(false), onSwitchFamily: handleSwitchFamily }),
+      showParent && /* @__PURE__ */ React.createElement(ParentPanel, { profiles, country, familyCode, labels, onUpdateLabels: (l) => setLabels(l), onClose: () => { setShowParent(false); if (window.__pendingMerge) { const m = window.__pendingMerge; window.__pendingMerge = null; setProfiles(m); } }, onSwitchFamily: handleSwitchFamily }),
       showAdmin && /* @__PURE__ */ React.createElement(AdminPanel, { onClose: () => setShowAdmin(false) }),
       !showFamilySetup && familyCode && /* @__PURE__ */ React.createElement(FeedbackWidget, { familyCode, profiles }),
-      screen === "home" && /* @__PURE__ */ React.createElement(HomeScreen, { profiles, country, labels, familyCode, onSetCountry: setCountry, onSelectProfile: (p) => { setActiveProfile(p); setScreen("dashboard"); }, onCreateProfile: () => setScreen("createProfile"), onParentMode: () => setShowParentPin(true), onAdminMode: () => setShowAdminPin(true), onMergeFamily: () => setShowMerge(true) }),
+      screen === "home" && /* @__PURE__ */ React.createElement(HomeScreen, { profiles, country, labels, familyCode, onSetCountry: setCountry, onSelectProfile: (p) => { setActiveProfile(p); setScreen("dashboard"); }, onCreateProfile: () => setScreen("createProfile"), onParentMode: () => setShowParentPin(true), onAdminMode: () => setShowAdminPin(true) }),
       screen === "createProfile" && /* @__PURE__ */ React.createElement(CreateProfile, { country, onSave: (profile) => { const updated = [...profiles, profile]; setProfiles(updated); setActiveProfile(profile); setScreen("dashboard"); }, onBack: () => setScreen("home") }),
       screen === "dashboard" && activeProfile && /* @__PURE__ */ React.createElement(Dashboard, { profile: activeProfile, country, labels, onFlash: () => setScreen("flashSetup"), onQuiz: () => setScreen("quizSetup"), onProgress: () => setScreen("profileView"), onEdit: () => setScreen("editProfile"), onHome: goHome }),
       screen === "flashSetup" && activeProfile && /* @__PURE__ */ React.createElement(FlashSetup, { profile: activeProfile, country, onStart: (cfg) => { setGameConfig(cfg); setScreen("flashGame"); }, onBack: goDash }),
@@ -1828,7 +2150,7 @@ f(x) = x^${n2} + ${c2}`;
       screen === "editProfile" && activeProfile && /* @__PURE__ */ React.createElement(EditProfile, { profile: activeProfile, country, onSave: (updated) => { patchProfile(activeProfile.id, () => updated); setScreen("dashboard"); }, onBack: goDash })
     );
   }
-  function FamilyBar({ familyCode, onParentMode, onAdminMode, onMergeFamily }) {
+  function FamilyBar({ familyCode, onParentMode, onAdminMode }) {
     const [copied, setCopied] = useState(false);
     const [showShare, setShowShare] = useState(false);
     const [shareEmail, setShareEmail] = useState("");
@@ -1908,7 +2230,7 @@ Go to https://math.jacobsiler.com, tap "Join with Family Code" and enter the cod
         onClick: () => setShowShare((s) => !s)
       },
       "\u{1F4E8} Invite"
-    ), /* @__PURE__ */ React.createElement("button", { style: { ...S.backBtn, fontSize: "0.75rem", padding: "5px 12px", background: "#f0fff4", borderColor: "#b7f0d4", color: "#0d6e4f", fontWeight: 800 }, onClick: onMergeFamily }, "\u{1F517} Import"), /* @__PURE__ */ React.createElement("button", { style: { ...S.backBtn, fontSize: "0.75rem", padding: "5px 12px" }, onClick: onParentMode }, "\u{1F468}\u200D\u{1F469}\u200D\u{1F467} Parent"), /* @__PURE__ */ React.createElement("button", { style: { ...S.backBtn, fontSize: "0.75rem", padding: "5px 12px", opacity: 0.4 }, onClick: onAdminMode }, "\u{1F6E1}\uFE0F"))), showShare && /* @__PURE__ */ React.createElement("div", { style: {
+    ), /* @__PURE__ */ React.createElement("button", { style: { ...S.backBtn, fontSize: "0.75rem", padding: "5px 12px" }, onClick: onParentMode }, "\u{1F468}\u200D\u{1F469}\u200D\u{1F467} Parent"), /* @__PURE__ */ React.createElement("button", { style: { ...S.backBtn, fontSize: "0.75rem", padding: "5px 12px", opacity: 0.4 }, onClick: onAdminMode }, "\u{1F6E1}\uFE0F"))), showShare && /* @__PURE__ */ React.createElement("div", { style: {
       ...S.card,
       padding: "16px 18px",
       marginBottom: 14,
@@ -1954,7 +2276,7 @@ Go to https://math.jacobsiler.com, tap "Join with Family Code" and enter the cod
       shareSending ? "\u2026" : shareSent ? "\u2713 Sent!" : "Send"
     )), shareSent && /* @__PURE__ */ React.createElement("div", { style: { color: "#0d6e4f", fontWeight: 700, fontSize: "0.8rem", marginTop: 8, textAlign: "center" } }, "\u{1F4E7} Invite sent!"), shareErr && /* @__PURE__ */ React.createElement("div", { style: { color: "#FF6B6B", fontWeight: 700, fontSize: "0.8rem", marginTop: 8, textAlign: "center" } }, "\u274C ", typeof shareErr === "string" ? shareErr : "Email failed \u2014 see browser console (F12) for details")));
   }
-  function HomeScreen({ profiles, country, labels, familyCode, onSetCountry, onSelectProfile, onCreateProfile, onParentMode, onAdminMode, onMergeFamily }) {
+  function HomeScreen({ profiles, country, labels, familyCode, onSetCountry, onSelectProfile, onCreateProfile, onParentMode, onAdminMode }) {
     const cl = COUNTRY_LABELS[country];
     return /* @__PURE__ */ React.createElement(Page, null, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "36px 0 16px", animation: "fadeUp 0.5s ease" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "3rem", marginBottom: 6 } }, "\u{1F31F}"), /* @__PURE__ */ React.createElement("h1", { style: {
       fontFamily: "'Baloo 2',cursive",
@@ -1963,7 +2285,7 @@ Go to https://math.jacobsiler.com, tap "Join with Family Code" and enter the cod
       color: "var(--navy)",
       letterSpacing: "-1px",
       textShadow: "2px 3px 0 rgba(26,58,107,0.1)"
-    } }, "Math Adventure"), /* @__PURE__ */ React.createElement("p", { style: { color: "var(--muted)", fontWeight: 700, fontSize: "0.95rem", marginTop: 4 } }, "A joyful homeschool ", country === "US" ? "math" : "maths", " companion")), /* @__PURE__ */ React.createElement(FamilyBar, { familyCode, onParentMode, onAdminMode, onMergeFamily }), /* @__PURE__ */ React.createElement("div", { style: { ...S.card, padding: "14px 18px", marginBottom: 14, animation: "fadeUp 0.4s 0.05s ease both" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.78rem", fontWeight: 800, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 } }, "\u{1F30D} Curriculum"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, Object.entries(COUNTRY_LABELS).map(([code, cl2]) => /* @__PURE__ */ React.createElement("button", { key: code, onClick: () => onSetCountry(code), style: {
+    } }, "Math Adventure"), /* @__PURE__ */ React.createElement("p", { style: { color: "var(--muted)", fontWeight: 700, fontSize: "0.95rem", marginTop: 4 } }, "A joyful homeschool ", country === "US" ? "math" : "maths", " companion")), /* @__PURE__ */ React.createElement(FamilyBar, { familyCode, onParentMode, onAdminMode }), /* @__PURE__ */ React.createElement("div", { style: { ...S.card, padding: "14px 18px", marginBottom: 14, animation: "fadeUp 0.4s 0.05s ease both" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.78rem", fontWeight: 800, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 } }, "\u{1F30D} Curriculum"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, Object.entries(COUNTRY_LABELS).map(([code, cl2]) => /* @__PURE__ */ React.createElement("button", { key: code, onClick: () => onSetCountry(code), style: {
       border: `2px solid ${country === code ? "var(--blue)" : "#e0e0e0"}`,
       background: country === code ? "#eaf0ff" : "#fafafa",
       borderRadius: 20,
@@ -2484,13 +2806,13 @@ Go to https://math.jacobsiler.com, tap "Join with Family Code" and enter the cod
     const [score, setScore] = useState(0);
     const [answers, setAnswers] = useState([]);
     const [chosen, setChosen] = useState(null);
-    const [choices, setChoices] = useState(() => generateChoices(config.problems[0].answer));
+    const [choices, setChoices] = useState(() => generateChoices(config.problems[0].answer, config.problems[0].topic));
     const [feedback, setFeedback] = useState(null);
     const prob = config.problems[idx];
     useEffect(() => {
       setChosen(null);
       setFeedback(null);
-      setChoices(generateChoices(prob.answer));
+      setChoices(generateChoices(prob.answer, prob.topic));
     }, [idx]);
     const handleAnswer = (c) => {
       if (chosen !== null) return;
@@ -2531,7 +2853,7 @@ Go to https://math.jacobsiler.com, tap "Join with Family Code" and enter the cod
       letterSpacing: 1,
       whiteSpace: "pre-line",
       lineHeight: 1.3
-    } }, prob.question), prob.hint && /* @__PURE__ */ React.createElement("div", { style: { color: "var(--muted)", fontSize: "0.8rem", fontWeight: 700, marginTop: 8 } }, prob.hint)), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } }, choices.map((c, i) => {
+    } }, prob.question), prob.hint && /* @__PURE__ */ React.createElement("div", { style: { color: "var(--muted)", fontSize: "0.8rem", fontWeight: 700, marginTop: 8 } }, prob.hint)), /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: prob.isEarly ? 14 : 12 } }, choices.map((c, i) => {
       const isChosen = chosen !== null && String(chosen) === String(c);
       const isCorrect = String(c) === String(prob.answer);
       let border = "#e0e0e0", bg = "#fafafa", col = "var(--text)";
@@ -2555,12 +2877,13 @@ Go to https://math.jacobsiler.com, tap "Join with Family Code" and enter the cod
           style: {
             border: `3px solid ${border}`,
             borderRadius: 16,
-            padding: "16px 10px",
+            padding: prob.isEarly ? "20px 10px" : "16px 10px",
             background: bg,
             color: col,
             fontFamily: "'Baloo 2',cursive",
-            fontSize: "clamp(1.3rem,4vw,1.8rem)",
+            fontSize: prob.isEarly ? "clamp(1.6rem,5vw,2.2rem)" : "clamp(1.3rem,4vw,1.8rem)",
             fontWeight: 800,
+            lineHeight: 1.25,
             transition: "border 0.15s, background 0.15s",
             animation: isChosen && !isCorrect ? "shake 0.35s ease" : isCorrect && chosen ? "pop 0.3s ease" : "none",
             cursor: chosen ? "default" : "pointer"
