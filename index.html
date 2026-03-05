@@ -706,7 +706,24 @@ f(x) = x^${n2} + ${c2}`;
   const SK_RECOVERY_EMAIL = "mathAdventure_recoveryEmail";
   function loadProfiles() {
     try {
-      return JSON.parse(localStorage.getItem(SK) || "[]");
+      const profiles = JSON.parse(localStorage.getItem(SK) || "[]");
+      return profiles.map((profile) => {
+        const hasProgress = Object.keys(profile.topicProgress || {}).some((k) => profile.topicProgress[k].attempts > 0);
+        if (hasProgress || !profile.quizHistory?.length) return profile;
+        const topicProgress = {};
+        profile.quizHistory.forEach((q) => {
+          const topics = q.topics || [];
+          if (!topics.length) return;
+          const perTopic = Math.round((q.total || 10) / topics.length);
+          const correctPerTopic = Math.round((q.score || 0) / topics.length);
+          topics.forEach((t) => {
+            if (!topicProgress[t]) topicProgress[t] = { attempts: 0, correct: 0 };
+            topicProgress[t].attempts += perTopic;
+            topicProgress[t].correct += correctPerTopic;
+          });
+        });
+        return { ...profile, topicProgress };
+      });
     } catch {
       return [];
     }
