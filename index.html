@@ -134,91 +134,91 @@
       age: "4\u20135",
       color: "#FFD166",
       emoji: "\u{1F392}",
-      topics: ["counting", "addition_basic", "subtraction_basic", "shapes", "logic_combo"]
+      topics: ["counting", "addition_basic", "subtraction_basic", "shapes", "logic_combo", "mental_math"]
     },
     {
       id: "1",
       age: "5\u20136",
       color: "#FFB347",
       emoji: "\u{1F331}",
-      topics: ["addition_basic", "subtraction_basic", "counting", "place_value_10", "logic_combo"]
+      topics: ["addition_basic", "subtraction_basic", "counting", "place_value_10", "logic_combo", "mental_math"]
     },
     {
       id: "2",
       age: "6\u20137",
       color: "#FF9F7F",
       emoji: "\u{1F33F}",
-      topics: ["addition", "subtraction", "place_value", "skip_counting", "logic_combo"]
+      topics: ["addition", "subtraction", "place_value", "skip_counting", "logic_combo", "mental_math"]
     },
     {
       id: "3",
       age: "7\u20138",
       color: "#06D6A0",
       emoji: "\u{1F30A}",
-      topics: ["multiplication", "division", "addition", "subtraction", "fractions_intro", "logic_combo"]
+      topics: ["multiplication", "division", "addition", "subtraction", "fractions_intro", "logic_combo", "mental_math"]
     },
     {
       id: "4",
       age: "8\u20139",
       color: "#4ECDC4",
       emoji: "\u2B50",
-      topics: ["multiplication", "division", "fractions", "decimals_intro", "place_value", "logic_combo"]
+      topics: ["multiplication", "division", "fractions", "decimals_intro", "place_value", "logic_combo", "mental_math"]
     },
     {
       id: "5",
       age: "9\u201310",
       color: "#2D6BE4",
       emoji: "\u{1F52E}",
-      topics: ["multiplication", "division", "fractions", "decimals", "percentages_intro", "logic_combo"]
+      topics: ["multiplication", "division", "fractions", "decimals", "percentages_intro", "logic_combo", "mental_math"]
     },
     {
       id: "6",
       age: "10\u201311",
       color: "#9B5DE5",
       emoji: "\u{1F680}",
-      topics: ["fractions", "decimals", "percentages", "integers", "ratios", "logic_combo"]
+      topics: ["fractions", "decimals", "percentages", "integers", "ratios", "logic_combo", "mental_math"]
     },
     {
       id: "7",
       age: "11\u201312",
       color: "#E040FB",
       emoji: "\u{1F52C}",
-      topics: ["integers", "ratios", "algebra_intro", "geometry_basic", "percentages", "logic_combo"]
+      topics: ["integers", "ratios", "algebra_intro", "geometry_basic", "percentages", "logic_combo", "mental_math"]
     },
     {
       id: "8",
       age: "12\u201313",
       color: "#FF6B6B",
       emoji: "\u{1F4D0}",
-      topics: ["algebra_intro", "algebra_linear", "geometry_basic", "statistics_intro", "fractions", "logic_combo"]
+      topics: ["algebra_intro", "algebra_linear", "geometry_basic", "statistics_intro", "fractions", "logic_combo", "mental_math"]
     },
     {
       id: "9",
       age: "13\u201314",
       color: "#F06292",
       emoji: "\u{1F4CA}",
-      topics: ["algebra_linear", "algebra_expand", "geometry_angles", "statistics_intro", "pythagoras", "logic_combo"]
+      topics: ["algebra_linear", "algebra_expand", "geometry_angles", "statistics_intro", "pythagoras", "logic_combo", "mental_math"]
     },
     {
       id: "10",
       age: "14\u201315",
       color: "#26C6DA",
       emoji: "\u{1F9EE}",
-      topics: ["algebra_linear", "algebra_expand", "pythagoras", "trig_intro", "statistics_intro", "logic_combo"]
+      topics: ["algebra_linear", "algebra_expand", "pythagoras", "trig_intro", "statistics_intro", "logic_combo", "mental_math"]
     },
     {
       id: "11",
       age: "15\u201316",
       color: "#66BB6A",
       emoji: "\u{1F4C8}",
-      topics: ["trig_intro", "trig_advanced", "algebra_quadratic", "statistics_advanced", "sequences", "logic_combo"]
+      topics: ["trig_intro", "trig_advanced", "algebra_quadratic", "statistics_advanced", "sequences", "logic_combo", "mental_math"]
     },
     {
       id: "12",
       age: "16\u201318",
       color: "#8D6E63",
       emoji: "\u{1F393}",
-      topics: ["algebra_quadratic", "trig_advanced", "calculus_intro", "sequences", "statistics_advanced", "logic_combo"]
+      topics: ["algebra_quadratic", "trig_advanced", "calculus_intro", "sequences", "statistics_advanced", "logic_combo", "mental_math"]
     }
   ];
   const TOPIC_LABELS = {
@@ -254,7 +254,8 @@
     trig_advanced: "Trigonometry",
     sequences: "Sequences & Series",
     calculus_intro: "Intro to Calculus",
-    logic_combo: "Logic & Combinatorics"
+    logic_combo: "Logic & Combinatorics",
+    mental_math: "Mental Maths"
   };
   const TOPIC_EMOJIS = {
     counting: "\u{1F522}",
@@ -289,7 +290,8 @@
     trig_advanced: "\u{1F4D0}",
     sequences: "\u{1F522}",
     calculus_intro: "\u222B",
-    logic_combo: "\u{1F9E9}"
+    logic_combo: "\u{1F9E9}",
+    mental_math: "\u26A1"
   };
   const TOPIC_RESOURCES = {
     counting: ["Count real objects at home \u2014 spoons, toys, steps!", "Draw a number line and point to each number", "Khan Academy Kids: Counting & Numbers"],
@@ -324,7 +326,8 @@
     trig_advanced: ["Know the unit circle \u2014 sin, cos, tan for key angles", "Practice converting between degrees and radians", "Khan Academy: Trigonometry"],
     sequences: ["Find the pattern first: what changes between each term?", "Arithmetic: add a fixed amount. Geometric: multiply by a fixed ratio", "Khan Academy: Sequences"],
     calculus_intro: ["Differentiation finds the slope; integration finds the area", "Power rule: d/dx(x\u207F) = nx\u207F\u207B\xB9", "Khan Academy: Calculus"],
-    logic_combo: ["Draw a tree diagram to count all possible outcomes", "Factorials: 4! = 4\xD73\xD72\xD71 \u2014 count arrangements step by step", "Khan Academy: Counting & Combinatorics"]
+    logic_combo: ["Draw a tree diagram to count all possible outcomes", "Factorials: 4! = 4\xD73\xD72\xD71 \u2014 count arrangements step by step", "Khan Academy: Counting & Combinatorics"],
+    mental_math: ["Learn one trick at a time and drill it until it's automatic", "Say the steps out loud while you practice \u2014 it helps lock them in", "Art of Problem Solving: Mental Math strategies"]
   };
   const ENCOURAGEMENTS = {
     perfect: ["\u{1F3C6} PERFECT! You're a Math Superstar!", "\u{1F31F} Absolutely flawless \u2014 every single one!", "\u{1F4AB} 100%! You completely crushed it today!"],
@@ -793,6 +796,150 @@ On ${both} rainy days it was also windy.
 P(windy given rainy) as a fraction?`;
             a = `${both}/${rain}`;
             hint = `P(A|B) = P(A and B) / P(B) = ${both}/${rain}`;
+          }
+        }
+        break;
+      }
+      case "mental_math": {
+        if (easy) {
+          const tier = rnd(0, 4);
+          if (tier === 0) {
+            const big = rnd(5, 9), small = rnd(1, 4);
+            q = `${big} + ${small} = ?
+\u{1F4A1} Start at ${big}, count on ${small}`;
+            a = big + small;
+            hint = `Count on: ${big}\u2026 ${Array.from({ length: small }, (_, i) => big + i + 1).join(", ")}`;
+          } else if (tier === 1) {
+            const n = rnd(1, 9);
+            q = `Double ${n} = ?
+\u{1F4A1} Doubles are easy to remember!`;
+            a = n * 2;
+            hint = `${n} + ${n} = ${n * 2}`;
+          } else if (tier === 2) {
+            const pairs = [[8, 5], [8, 6], [8, 7], [9, 4], [9, 5], [9, 6], [9, 7], [7, 6], [7, 5]];
+            const [x, y] = pairs[rnd(0, pairs.length - 1)];
+            const fill = 10 - x, rest = y - fill;
+            q = `${x} + ${y} = ?
+\u{1F4A1} Make 10 first: ${x} + ${fill} = 10, then add ${rest}`;
+            a = x + y;
+            hint = `${x} + ${fill} = 10, then 10 + ${rest} = ${x + y}`;
+          } else if (tier === 3) {
+            const n = rnd(3, 8);
+            q = `${n} + ${n + 1} = ?
+\u{1F4A1} Near double: double ${n} then add 1`;
+            a = 2 * n + 1;
+            hint = `${n}+${n} = ${2 * n}, then +1 = ${2 * n + 1}`;
+          } else {
+            const big2 = rnd(10, 18), small2 = rnd(7, big2 - 1);
+            q = `${big2} \u2212 ${small2} = ?
+\u{1F4A1} Count up from ${small2} to ${big2}`;
+            a = big2 - small2;
+            hint = `${small2} + ? = ${big2} \u2192 answer is ${big2 - small2}`;
+          }
+        } else if (!hard) {
+          const tier = rnd(0, 5);
+          if (tier === 0) {
+            const n = rnd(2, 18) * 2;
+            q = `${n} \xD7 5 = ?
+\u{1F4A1} Halve it, then add a zero`;
+            a = n * 5;
+            hint = `${n} \xF7 2 = ${n / 2}, then \xD7 10 = ${n * 5}`;
+          } else if (tier === 1) {
+            const n = rnd(2, 9);
+            q = `${n} \xD7 11 = ?
+\u{1F4A1} Just repeat the digit!`;
+            a = n * 11;
+            hint = `${n} \xD7 11: put ${n} in tens AND units = ${n * 11}`;
+          } else if (tier === 2) {
+            const tens = rnd(1, 8), units = rnd(0, 9);
+            const n = tens * 10 + units;
+            const mid = tens + units;
+            if (mid <= 9) {
+              const ans = tens * 100 + mid * 10 + units;
+              q = `${n} \xD7 11 = ?
+\u{1F4A1} Keep outer digits, add them for the middle`;
+              a = ans;
+              hint = `${tens} _ ${units} \u2192 middle = ${tens}+${units} = ${mid} \u2192 ${ans}`;
+            } else {
+              const n2 = rnd(2, 9);
+              q = `${n2} \xD7 11 = ?
+\u{1F4A1} Repeat the digit: ${n2}_${n2}`;
+              a = n2 * 11;
+              hint = `${n2} \xD7 11 = ${n2 * 11}`;
+            }
+          } else if (tier === 3) {
+            const n = rnd(1, 12) * 4;
+            q = `${n} \xD7 25 = ?
+\u{1F4A1} \xF74 then \xD7100 (since 25 = 100\xF74)`;
+            a = n * 25;
+            hint = `${n} \xF7 4 = ${n / 4}, then \xD7 100 = ${n * 25}`;
+          } else if (tier === 4) {
+            const pairs2 = [[14, 5], [16, 5], [24, 5], [18, 5], [12, 15], [14, 15], [16, 15]];
+            const [x, y] = pairs2[rnd(0, pairs2.length - 1)];
+            q = `${x} \xD7 ${y} = ?
+\u{1F4A1} Double one, halve the other to make it easier`;
+            a = x * y;
+            hint = `${x}\xD7${y} \u2192 ${x / 2}\xD7${y * 2} = ${x / 2} \xD7 ${y * 2} = ${x * y}`;
+          } else {
+            const n = rnd(1, 15) * 10;
+            const pct = [10, 20, 50][rnd(0, 2)];
+            q = `${pct}% of ${n} = ?
+\u{1F4A1} Find 10% first, then scale`;
+            a = n * pct / 100;
+            hint = pct === 10 ? `Move decimal left: ${n} \u2192 ${n / 10}` : pct === 20 ? `10% = ${n / 10}, then double = ${n / 5}` : `Half of ${n} = ${n / 2}`;
+          }
+        } else {
+          const tier = rnd(0, 5);
+          if (tier === 0) {
+            const t1 = rnd(1, 3), t2 = rnd(1, 9), t3 = rnd(1, 3), t4 = rnd(1, 9);
+            const x = t1 * 10 + t2, y = t3 * 10 + t4;
+            const p1 = t1 * t3, p2 = t1 * t4 + t2 * t3, p3 = t2 * t4;
+            q = `${x} \xD7 ${y} = ?
+\u{1F4A1} Split: (${t1}\xD7${t3})\xD7100 + (${t1}\xD7${t4}+${t2}\xD7${t3})\xD710 + (${t2}\xD7${t4})`;
+            a = x * y;
+            hint = `${p1}\xD7100 + ${p2}\xD710 + ${p3} = ${p1 * 100} + ${p2 * 10} + ${p3} = ${x * y}`;
+          } else if (tier === 1) {
+            const n = rnd(1, 9);
+            const num = n * 10 + 5;
+            const ans = num * num;
+            q = `${num}\xB2 = ?
+\u{1F4A1} (${n} \xD7 ${n + 1}) then stick 25 on the end`;
+            a = ans;
+            hint = `${n} \xD7 ${n + 1} = ${n * (n + 1)}, so ${num}\xB2 = ${n * (n + 1)}25 = ${ans}`;
+          } else if (tier === 2) {
+            const na = rnd(1, 9), nb = rnd(1, 9);
+            const x = 100 - na, y = 100 - nb;
+            q = `${x} \xD7 ${y} = ?
+\u{1F4A1} Both near 100: (100\u2212${na})(100\u2212${nb})`;
+            a = x * y;
+            hint = `100\xB2\u2212(${na}+${nb})\xD7100+${na}\xD7${nb} = 10000\u2212${(na + nb) * 100}+${na * nb} = ${x * y}`;
+          } else if (tier === 3) {
+            const roots = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+            const rt = roots[rnd(0, roots.length - 1)];
+            const cube = rt * rt * rt;
+            const unitsMap = { 1: 1, 2: 8, 3: 7, 4: 4, 5: 5, 6: 6, 7: 3, 8: 2, 9: 9, 0: 0 };
+            const cubeUnits = cube % 10;
+            const rootUnits = Object.entries(unitsMap).find(([k, v]) => v === cubeUnits)?.[0];
+            q = `\u221B${cube} = ?
+\u{1F4A1} Units digit trick + which cube fits?`;
+            a = rt;
+            hint = rt < 10 ? `${rt}\xB3 = ${rt}\xD7${rt}\xD7${rt} = ${cube}, so \u221B${cube} = ${rt}` : `Units digit of ${cube} is ${cubeUnits} \u2192 root ends in ${rootUnits}. ${Math.floor(rt / 10)}\xB3=${Math.pow(Math.floor(rt / 10), 3)}, ${Math.ceil(rt / 10)}\xB3=${Math.pow(Math.ceil(rt / 10), 3)} \u2192 first digit is ${Math.floor(rt / 10)}`;
+          } else if (tier === 4) {
+            const n = rnd(-9, 9);
+            const num = 50 + n;
+            const ans = num * num;
+            q = `${num}\xB2 = ?
+\u{1F4A1} Near 50: 25${n >= 0 ? "+" : "-"}${Math.abs(n)} hundreds, then add ${n}\xB2`;
+            a = ans;
+            hint = `(50${n >= 0 ? "+" : "-"}${Math.abs(n)})\xB2 = 2500${n >= 0 ? "+" : "-"}${Math.abs(100 * n)}+${n * n} = ${ans}`;
+          } else {
+            const n = rnd(1, 8);
+            const dividend = n * 9 * rnd(1, 11);
+            const quotient = dividend / 9;
+            q = `${dividend} \xF7 9 = ?
+\u{1F4A1} Divide step by step, or use times-table knowledge`;
+            a = quotient;
+            hint = `9 \xD7 ${quotient} = ${dividend}, so ${dividend} \xF7 9 = ${quotient}`;
           }
         }
         break;
