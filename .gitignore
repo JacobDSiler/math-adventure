@@ -1,0 +1,16 @@
+# local-only: logs, canary, pending commit message
+logs/
+deploy-tick.txt
+.pending-commit.txt
+# never commit secrets
+.secrets/
+.env
+.env.*
+tokens.json
+*service-account*.json
+*firebase-adminsdk*.json
+*.pem
+*.key
+*.keystore
+.netlify/
+node_modules/
