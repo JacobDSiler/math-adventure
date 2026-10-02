@@ -39,6 +39,8 @@
   <div id="root"></div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="ma-games.js"></script>
+  <script src="ma-game-blockcount.js"></script>
   <script>
   var __create = Object.create;
   var __defProp = Object.defineProperty;
@@ -2277,7 +2279,7 @@ Go to https://math.jacobsiler.com, tap "Join with Family Code" and enter the cod
       color: "var(--navy)",
       letterSpacing: "-1px",
       textShadow: "2px 3px 0 rgba(26,58,107,0.1)"
-    } }, "Math Adventure"), /* @__PURE__ */ React.createElement("p", { style: { color: "var(--muted)", fontWeight: 700, fontSize: "0.95rem", marginTop: 4 } }, "A joyful homeschool ", country === "US" ? "math" : "maths", " companion")), /* @__PURE__ */ React.createElement(FamilyBar, { familyCode, onParentMode, onAdminMode }), /* @__PURE__ */ React.createElement("div", { style: { ...S.card, padding: "14px 18px", marginBottom: 14, animation: "fadeUp 0.4s 0.05s ease both" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.78rem", fontWeight: 800, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 } }, "\u{1F30D} Curriculum"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, Object.entries(COUNTRY_LABELS).map(([code, cl2]) => /* @__PURE__ */ React.createElement("button", { key: code, onClick: () => onSetCountry(code), style: {
+    } }, "Math Adventure"), /* @__PURE__ */ React.createElement("p", { style: { color: "var(--muted)", fontWeight: 700, fontSize: "0.95rem", marginTop: 4 } }, "A joyful homeschool ", country === "US" ? "math" : "maths", " companion")), /* @__PURE__ */ React.createElement(FamilyBar, { familyCode, onParentMode, onAdminMode }), /* @__PURE__ */ React.createElement("button", { style: { ...S.btnPrimary, width: "100%", marginBottom: 14 }, onClick: () => window.MAGames && window.MAGames.open() }, "\u{1F3AE} Play Games"), /* @__PURE__ */ React.createElement("div", { style: { ...S.card, padding: "14px 18px", marginBottom: 14, animation: "fadeUp 0.4s 0.05s ease both" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "0.78rem", fontWeight: 800, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 } }, "\u{1F30D} Curriculum"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, Object.entries(COUNTRY_LABELS).map(([code, cl2]) => /* @__PURE__ */ React.createElement("button", { key: code, onClick: () => onSetCountry(code), style: {
       border: `2px solid ${country === code ? "var(--blue)" : "#e0e0e0"}`,
       background: country === code ? "#eaf0ff" : "#fafafa",
       borderRadius: 20,
@@ -2920,6 +2922,23 @@ Go to https://math.jacobsiler.com, tap "Join with Family Code" and enter the cod
     },
     badge: { borderRadius: 20, padding: "4px 12px", fontWeight: 800, fontSize: "0.8rem", fontFamily: "Nunito,sans-serif" }
   };
+  // ---- Math Adventure Games (ma-games.js) adapters ----
+  // Solo only for now: `db` is intentionally not passed until the Realtime Database rules are confirmed.
+  if (window.MAGames) {
+    window.MAGames.configure({
+      getFamilyCode: () => loadFamilyCode() || "GUEST",
+      getPlayers: () => loadProfiles().map((p) => ({ id: String(p.id), name: p.name, avatar: p.avatar })),
+      onResult: (r) => {
+        try {
+          const KEY = "mathAdventure_gameResults";
+          const all = JSON.parse(localStorage.getItem(KEY) || "[]");
+          all.push({ ...r, ts: Date.now() });
+          localStorage.setItem(KEY, JSON.stringify(all.slice(-200)));
+        } catch {
+        }
+      }
+    });
+  }
   const domRoot = ReactDOM.createRoot(document.getElementById("root"));
   domRoot.render(React.createElement(MathAdventure));
   </script>
