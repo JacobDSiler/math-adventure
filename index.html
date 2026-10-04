@@ -2960,8 +2960,8 @@ Go to https://math.jacobsiler.com, tap "Join with Family Code" and enter the cod
       }
     });
   }
-  // Multiplayer TEST mode: open the site with ?mp=1 to switch on Realtime Database rooms. Off for everyone else.
-  if (window.MAGames && /[?&]mp=1(&|$)/.test(location.search)) {
+  // Multiplayer: Realtime Database rooms are on by default (rules published). Add ?mp=0 to the address to force solo only.
+  if (window.MAGames && !/[?&]mp=0(&|$)/.test(location.search)) {
     const loadScript = (src) => new Promise((ok, no) => {
       const el = document.createElement("script");
       el.src = src;
