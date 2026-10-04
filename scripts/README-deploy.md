@@ -14,3 +14,10 @@ ahead (never force-pushes), commits everything (message from `.pending-commit.tx
    Claude ticks it after finishing substantial changes.
 Colours: green idle, yellow change detected, blue pushing, red failed, gray paused.
 Stop it with `scripts\ma-stop-watcher.cmd`. Logs: `logs\push.log`, `logs\watcher.log`.
+
+## Multiplayer (Firebase rules)
+The Realtime Database rules were the default test rules that expired 2026-03-23, so the database is locked.
+`firebase\database.rules.json` opens ONLY `gameRooms/{ABCD}` and `gameRoomsByFamily/{code}` and leaves
+everything else closed. Publish with `scripts\ma-deploy-rules.cmd` (you type YES to confirm), or paste the
+file into Firebase console > Realtime Database > Rules > Publish.
+Test with two devices on https://math.jacobsiler.com/?mp=1 (the ?mp=1 flag switches multiplayer on).
