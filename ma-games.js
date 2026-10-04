@@ -1,4 +1,4 @@
-/*! Math Adventure Games engine v0.1.0
+/*! Math Adventure Games engine v0.2.0
  * -----------------------------------------------------------------------------
  * One plain <script> (no build step). Owns everything that is NOT game-specific:
  *   - game registry + level/adaptive-difficulty rules
@@ -35,7 +35,7 @@
 (function (root) {
   'use strict';
 
-  var MAGames = root.MAGames = { version: '0.1.0', games: {}, cfg: {}, _logic: {} };
+  var MAGames = root.MAGames = { version: '0.2.0', games: {}, cfg: {}, _logic: {} };
   var GAP = 1800;     // pause before a round starts (ms)
   var REVEAL = 1800;  // how long the answer is shown before moving on (ms)
   var GRACE = 2500;   // extra wait for slow / vanished players (ms)
@@ -252,6 +252,7 @@
     },
     create: function (meta, player) {
       var s = this, TS = root.firebase.database.ServerValue.TIMESTAMP, code = makeCode();
+      meta.family = s.family;
       var ref = s.db.ref('gameRooms/' + code);
       return ref.child('meta').once('value').then(function (sn) {
         if (sn.exists()) return s.create(meta, player); // code collision: roll again
@@ -260,7 +261,7 @@
         return ref.set(room).then(function () {
           s.attach(code, player);
           var ix = s.db.ref('gameRoomsByFamily/' + s.family + '/' + code);
-          ix.set({ game: meta.game, mode: meta.mode, host: player.name, t: TS });
+          ix.set({ game: meta.game, mode: meta.mode, host: player.name, hostAvatar: player.avatar || '', n: 1, t: TS });
           ix.onDisconnect().remove();
           return code;
         });
@@ -283,6 +284,7 @@
       return s.off;
     },
     setPlayer: function (id, patch) { return this.ref.child('players/' + id).update(patch); },
+    setCount: function (n) { return this.db.ref('gameRoomsByFamily/' + this.family + '/' + this.code + '/n').set(n); },
     start: function () {
       var s = this;
       s.db.ref('gameRoomsByFamily/' + s.family + '/' + s.code).remove();
@@ -326,8 +328,9 @@
       var v = sn.val() || {}, out = [];
       Object.keys(v).forEach(function (k) {
         var r = v[k];
-        if (r && Date.now() - (r.t || 0) < 6 * 3600e3) out.push({ code: k, game: r.game, mode: r.mode, host: r.host });
+        if (r && r.game && Date.now() - (r.t || 0) < 6 * 3600e3) out.push({ code: k, game: r.game, mode: r.mode, host: r.host, avatar: r.hostAvatar, n: r.n || 1, t: r.t || 0 });
       });
+      out.sort(function (a, b) { return b.t - a.t; });
       cb(out);
     });
     return function () { ref.off('value', fn); };
@@ -392,7 +395,11 @@
     M.room = room;
     var st = room.state || {};
     if (!M.mode) { M.mode = room.meta.mode; M.kind = M.mode === 'solo' ? 'race' : M.mode; M.host.mode = M.kind; }
-    if (st.phase === 'lobby') return M.renderLobby(room);
+    if (st.phase === 'lobby') {
+      var cnt = Object.keys(room.players || {}).length;
+      if (M.isHost && M.t.setCount && cnt !== M._cnt) { M._cnt = cnt; M.t.setCount(cnt); }
+      return M.renderLobby(room);
+    }
     if (room.meta.seed !== M.seed) M.resetForSeed(room.meta.seed);
     if (M.finished) return;
     if (M.kind === 'race') {
@@ -424,13 +431,14 @@
     S.title.textContent = g.name;
     var nodes = [
       h('div', { class: 'mag-em big', text: g.emoji || '🎲' }),
-      h('h2', { class: 'mag-h', text: MODE_NAME[M.mode] || '' })
+      h('h2', { class: 'mag-h', text: MODE_NAME[M.mode] || '' }),
+      h('div', { class: 'mag-sub', text: g.name + (M.mode === 'solo' ? '' : ' · everyone plays this game') })
     ];
     if (M.mode !== 'solo') {
       nodes.push(
         h('div', { class: 'mag-sub', text: 'Room code' }),
         h('div', { class: 'mag-code', text: M.t.code || '' }),
-        h('div', { class: 'mag-sub', text: 'Family members see this room automatically. Cousins type the code.' })
+        h('div', { class: 'mag-sub', text: 'Family members find this under Find a game. Cousins type the code.' })
       );
     }
     nodes.push(h('div', { class: 'mag-chips' }, ids.map(function (id) {
@@ -639,6 +647,7 @@
     if (this.unwatch) { this.unwatch(); this.unwatch = null; }
   };
   Shell.prototype.close = function () {
+    if (this.unwatch) { this.unwatch(); this.unwatch = null; }
     this.endMatch();
     if (this.ov.parentNode) this.ov.parentNode.removeChild(this.ov);
     MAGames._shell = null;
@@ -658,20 +667,89 @@
       var g = MAGames.games[id];
       return card(g.emoji || '🎲', g.name, g.blurb, g.grades, function () { S.who(g); });
     });
-    S.set([h('h2', { class: 'mag-h', text: 'Pick a game!' }), h('div', { class: 'mag-grid' }, cards)]);
+    var nodes = [h('h2', { class: 'mag-h', text: 'Pick a game!' })];
+    if (S.unwatch) { S.unwatch(); S.unwatch = null; }
+    if (MAGames.cfg.db) {
+      var find = h('button', { class: 'mag-btn', text: '🔎 Find a game to join', onclick: function () { S.findGames(); } });
+      nodes.push(find);
+      S.unwatch = FirebaseTransport.watchFamily(MAGames.cfg.db, familyCode(), function (rooms) {
+        find.textContent = rooms.length ? '🔎 Find a game to join (' + rooms.length + ' open)' : '🔎 Find a game to join';
+      });
+    }
+    nodes.push(h('div', { class: 'mag-grid' }, cards));
+    S.set(nodes);
   };
 
-  Shell.prototype.who = function (g) {
+  // the lobby: every open room in the family, whatever the game
+  Shell.prototype.findGames = function () {
+    var S = this;
+    if (!S.me) return S.who(null, function () { S.findGames(); });
+    var err = h('div', { class: 'mag-err' }), list = h('div', { class: 'mag-list' });
+    var input = h('input', { class: 'mag-input code', maxlength: '4', placeholder: 'ABCD', autocapitalize: 'characters' });
+    if (S.unwatch) S.unwatch();
+    S.title.textContent = 'Game lobby';
+    S.unwatch = FirebaseTransport.watchFamily(MAGames.cfg.db, familyCode(), function (rooms) {
+      list.innerHTML = '';
+      rooms.forEach(function (r) {
+        var g = MAGames.games[r.game]; if (!g) return;
+        list.appendChild(card(g.emoji || '🎲', (r.host || 'Someone') + '’s ' + (MODE_NAME[r.mode] || r.mode), g.name + ' · ' + r.n + (r.n === 1 ? ' player' : ' players') + ' waiting', 'Join', function () { S.confirmJoin(r.code); }, true));
+      });
+      if (!list.children.length) list.appendChild(h('div', { class: 'mag-sub', text: 'No open games right now. Start one from any game and it shows up here for everyone in your family.' }));
+    });
+    S.set([
+      h('h2', { class: 'mag-h', text: 'Open games' }),
+      list,
+      h('div', { class: 'mag-sub', text: 'Playing with someone outside the family? Type their room code.' }),
+      h('div', { class: 'mag-row' }, [input, h('button', { class: 'mag-btn alt', text: 'Look up', onclick: function () { S.confirmJoin(input.value, err); } })]),
+      err,
+      h('button', { class: 'mag-btn alt', text: 'Back', onclick: function () { S.picker(); } })
+    ]);
+  };
+
+  // always show exactly which game and mode you are about to join
+  Shell.prototype.confirmJoin = function (code, err, picked) {
+    var S = this, db = MAGames.cfg.db; code = String(code || '').toUpperCase().trim();
+    err = err || h('div', { class: 'mag-err' });
+    if (!/^[A-Z]{4}$/.test(code)) { err.textContent = 'Room codes are 4 letters'; return; }
+    err.textContent = '';
+    db.ref('gameRooms/' + code).once('value').then(function (sn) {
+      var r = sn.val();
+      if (!r || !r.meta) throw new Error('No room with that code');
+      var g = MAGames.games[r.meta.game];
+      if (!g) throw new Error("This device doesn't have that game yet");
+      if (r.state && r.state.phase !== 'lobby' && !(r.players && r.players[S.me.id])) throw new Error('That game already started');
+      if (S.unwatch) { S.unwatch(); S.unwatch = null; }
+      var P = r.players || {}, who = Object.keys(P).map(function (k) { return h('div', { class: 'mag-chip' }, [(P[k].avatar || '🙂') + ' ' + P[k].name]); });
+      var nodes = [
+        h('div', { class: 'mag-em big', text: g.emoji || '🎲' }),
+        h('h2', { class: 'mag-h', text: g.name }),
+        h('div', { class: 'mag-sub', text: MODE_NAME[r.meta.mode] + ' · room ' + code }),
+        h('div', { class: 'mag-chips' }, who)
+      ];
+      if (picked && (picked.game !== g.id || picked.mode !== r.meta.mode)) {
+        nodes.push(h('div', { class: 'mag-err', text: 'You picked ' + MAGames.games[picked.game].name + ' (' + MODE_NAME[picked.mode] + '), but this room is playing ' + g.name + ' (' + MODE_NAME[r.meta.mode] + ').' }));
+      }
+      nodes.push(
+        h('button', { class: 'mag-btn', text: 'Join this game', onclick: function () { S.joinRoom(code, err); } }),
+        err,
+        h('button', { class: 'mag-btn alt', text: 'Back', onclick: function () { S.findGames(); } })
+      );
+      S.set(nodes);
+    }).catch(function (e) { err.textContent = e.message || String(e); });
+  };
+
+  Shell.prototype.who = function (g, after) {
     var S = this, cur = MAGames.cfg.getCurrentPlayer && MAGames.cfg.getCurrentPlayer();
-    if (cur) { S.me = mkPlayer(cur); return S.modes(g); }
+    var go = after || function () { S.modes(g); };
+    if (cur) { S.me = mkPlayer(cur); return go(); }
     var ps = listPlayers();
-    var cards = ps.map(function (p) { return card(p.avatar || '🙂', p.name, '', '', function () { S.me = mkPlayer(p); S.modes(g); }); });
-    cards.push(card('👋', 'Someone else', 'Visiting? Type a name', '', function () { S.guest(g); }));
+    var cards = ps.map(function (p) { return card(p.avatar || '🙂', p.name, '', '', function () { S.me = mkPlayer(p); go(); }); });
+    cards.push(card('👋', 'Someone else', 'Visiting? Type a name', '', function () { S.guest(g, go); }));
     S.set([h('h2', { class: 'mag-h', text: "Who's playing?" }), h('div', { class: 'mag-grid' }, cards),
       h('button', { class: 'mag-btn alt', text: 'Back', onclick: function () { S.picker(); } })]);
   };
 
-  Shell.prototype.guest = function (g) {
+  Shell.prototype.guest = function (g, go) {
     var S = this, avatar = '🐱', AV = ['🐱', '🐶', '🦄', '🚀', '🐸', '🌟', '🎈', '🐼'];
     var input = h('input', { class: 'mag-input', maxlength: '14', placeholder: 'Your name' });
     var row = h('div', { class: 'mag-chips' }, AV.map(function (a) {
@@ -683,9 +761,9 @@
     S.set([h('h2', { class: 'mag-h', text: "What's your name?" }), input, row,
       h('button', { class: 'mag-btn', text: 'Next', onclick: function () {
         var n = input.value.trim(); if (!n) return S.toast('Type a name first');
-        S.me = mkPlayer({ id: 'guest' + Math.random().toString(36).slice(2, 6), name: n, avatar: avatar }); S.modes(g);
+        S.me = mkPlayer({ id: 'guest' + Math.random().toString(36).slice(2, 6), name: n, avatar: avatar }); go();
       } }),
-      h('button', { class: 'mag-btn alt', text: 'Back', onclick: function () { S.who(g); } })]);
+      h('button', { class: 'mag-btn alt', text: 'Back', onclick: function () { S.who(g, go); } })]);
   };
 
   Shell.prototype.modes = function (g) {
@@ -718,10 +796,10 @@
     if (S.unwatch) S.unwatch();
     S.unwatch = FirebaseTransport.watchFamily(db, fam, function (rooms) {
       list.innerHTML = '';
-      rooms.filter(function (r) { return r.game === g.id; }).forEach(function (r) {
-        list.appendChild(h('button', { class: 'mag-btn alt', text: (r.host || 'Someone') + '’s game · ' + r.code, onclick: function () { S.joinRoom(r.code, err); } }));
+      rooms.filter(function (r) { return r.game === g.id && r.mode === mode; }).forEach(function (r) {
+        list.appendChild(h('button', { class: 'mag-btn alt', text: (r.host || 'Someone') + '’s ' + MODE_NAME[mode] + ' · ' + r.n + (r.n === 1 ? ' player' : ' players'), onclick: function () { S.confirmJoin(r.code, err, { game: g.id, mode: mode }); } }));
       });
-      if (!list.children.length) list.appendChild(h('div', { class: 'mag-sub', text: 'No open family games right now.' }));
+      if (!list.children.length) list.appendChild(h('div', { class: 'mag-sub', text: 'No open ' + MODE_NAME[mode] + ' games of ' + g.name + ' right now.' }));
     });
     S.set([
       h('h2', { class: 'mag-h', text: MODE_NAME[mode] }),
@@ -731,10 +809,10 @@
         S.match = new Match(S, g, mode, S.me, new FirebaseTransport(db, fam), true);
         S.match.create();
       } }),
-      h('div', { class: 'mag-sub', text: 'or join a game' }), list,
-      h('div', { class: 'mag-row' }, [input, h('button', { class: 'mag-btn alt', text: 'Join', onclick: function () { S.joinRoom(input.value, err); } })]),
+      h('div', { class: 'mag-sub', text: 'or join a ' + MODE_NAME[mode] + ' game of ' + g.name }), list,
+      h('div', { class: 'mag-row' }, [input, h('button', { class: 'mag-btn alt', text: 'Join', onclick: function () { S.confirmJoin(input.value, err, { game: g.id, mode: mode }); } })]),
       err,
-      h('button', { class: 'mag-btn alt', text: 'Back', onclick: function () { S.modes(g); } })
+      h('button', { class: 'mag-btn alt', text: 'Back', onclick: function () { if (S.unwatch) { S.unwatch(); S.unwatch = null; } S.modes(g); } })
     ]);
   };
 
