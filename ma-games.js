@@ -1,4 +1,4 @@
-/*! Math Adventure Games engine v0.2.1
+/*! Math Adventure Games engine v0.2.2
  * -----------------------------------------------------------------------------
  * One plain <script> (no build step). Owns everything that is NOT game-specific:
  *   - game registry + level/adaptive-difficulty rules
@@ -35,7 +35,7 @@
 (function (root) {
   'use strict';
 
-  var MAGames = root.MAGames = { version: '0.2.1', games: {}, cfg: {}, _logic: {} };
+  var MAGames = root.MAGames = { version: '0.2.2', games: {}, cfg: {}, _logic: {} };
   var GAP = 1800;     // pause before a round starts (ms)
   var REVEAL = 1800;  // how long the answer is shown before moving on (ms)
   var GRACE = 2500;   // extra wait for slow / vanished players (ms)
@@ -455,7 +455,13 @@
       h('button', { class: 'mag-icon big', text: '+', 'aria-label': 'Harder', onclick: function () { M.setLevel(lv + 1); } })
     ]));
     nodes.push(h('div', { class: 'mag-sub', text: 'The game adjusts as you play: 3 right in a row goes up, 2 misses goes down.' }));
-    if (M.isHost) nodes.push(h('button', { class: 'mag-btn', text: M.mode === 'solo' ? "Let's go!" : 'Start the game', onclick: function () { M.t.start(); } }));
+    if (M.isHost) {
+      var alone = M.mode !== 'solo' && ids.length < 2;
+      var go = h('button', { class: 'mag-btn', text: M.mode === 'solo' ? "Let's go!" : 'Start the game', onclick: function () { if (!alone) M.t.start(); } });
+      if (alone) { go.disabled = true; go.setAttribute('aria-disabled', 'true'); }
+      nodes.push(go);
+      if (alone) nodes.push(h('div', { class: 'mag-sub', text: 'Waiting for another player to join. Share the code above, or they can tap Find a game.' }));
+    }
     else nodes.push(h('div', { class: 'mag-sub', text: 'Waiting for the host to start…' }));
     nodes.push(h('button', { class: 'mag-btn alt', text: 'Back', onclick: function () { S.picker(); } }));
     S.set(nodes);
@@ -859,6 +865,7 @@
     '.mag-tag{display:inline-block;margin-top:4px;padding:2px 10px;border-radius:999px;background:#3ddc97;border:2px solid #1b2a49;font-size:.78rem;font-weight:800}',
     '.mag-btn{font:inherit;font-weight:900;font-size:1.25rem;padding:14px 18px;border-radius:16px;border:3px solid #1b2a49;background:#ffd23f;color:#1b2a49;box-shadow:0 5px 0 #1b2a49;cursor:pointer;touch-action:manipulation}',
     '.mag-btn:active{transform:translateY(4px);box-shadow:0 1px 0 #1b2a49}.mag-btn.alt{background:#fff}',
+    '.mag-btn:disabled{background:#cfd6e0;color:#7b879b;border-color:#7b879b;box-shadow:0 5px 0 #7b879b;cursor:not-allowed;transform:none}',
     '.mag-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}',
     '.mag-chip{background:#fff;border:3px solid #1b2a49;border-radius:999px;padding:3px 12px;font-weight:800}',
     '.mag-chip.me{background:#ffd23f}.mag-chip.team{background:#3ddc97}',
